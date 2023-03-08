@@ -196,13 +196,48 @@ namespace Chroma
         read(inputtop, "use_multiple_writers", input.use_multiple_writers);
       }
 
-      input.phase.resize(Nd - 1);
-      for (int i = 0; i < Nd - 1; ++i)
-	input.phase[i] = 0;
-      if( inputtop.count("phase") == 1 ) {
-        read(inputtop, "phase", input.phase);
+      if (inputtop.count("phase") == 1)
+      {
+	read(inputtop, "phase", input.quarkPhase);
+	if (inputtop.count("quarkPhase") == 1 || inputtop.count("quarkPhase") == 1)
+	{
+	  QDPIO::cerr << "Error: please don't give the tag `phase' and either `quarkPhase' or "
+			 "`aQuarkPhase'"
+		      << std::endl;
+	  QDP_abort(1);
+	}
       }
-     }
+      else if (inputtop.count("quarkPhase") == 1)
+      {
+	read(inputtop, "quarkPhase", input.quarkPhase);
+      }
+      else if (inputtop.count("aQuarkPhase") == 1)
+      {
+	QDPIO::cerr << "Label `aQuarkPhase' without the label `quarkPhase'" << std::endl;
+	QDP_abort(1);
+      }
+      else
+      {
+	input.quarkPhase.resize(Nd - 1);
+      }
+
+      if (inputtop.count("aQuarkPhase") == 1)
+      {
+	read(inputtop, "aQuarkPhase", input.aQuarkPhase);
+      }
+      else
+      {
+	for (float i : input.quarkPhase)
+	  input.aQuarkPhase.push_back(-i);
+      }
+
+      // Check the correct size of quarkPhase and aQuarkPhase
+      if (input.quarkPhase.size() != Nd - 1 || input.aQuarkPhase.size() != Nd - 1)
+      {
+	QDPIO::cerr << "phase, quarkPhase and aQuarkPhase tags should have " << Nd - 1 << " components" << std::endl;
+	QDP_abort(1);
+      }
+    }
 
     //! Propagator output
     void write(XMLWriter& xml, const std::string& path, const Params::Param_t::Contract_t& input)
@@ -224,7 +259,8 @@ namespace Chroma
       write(xml, "use_genprop5_format", input.use_genprop5_format);
       write(xml, "use_device_for_contractions", input.use_device_for_contractions);
       write(xml, "use_multiple_writers", input.use_multiple_writers);
-      write(xml, "phase", input.phase);
+      write(xml, "quarkPhase", SB::tomulti1d(input.quarkPhase));
+      write(xml, "aQuarkPhase", SB::tomulti1d(input.aQuarkPhase));
 
       pop(xml);
     }
@@ -822,18 +858,18 @@ namespace Chroma
       //
       // Parse the phase
       //
-      if (params.param.contract.phase.size() != Nd - 1)
-      {
-	QDPIO::cerr << "phase tag should have " << Nd - 1 << " components" << std::endl;
-	QDP_abort(1);
-      }
-      SB::Coor<Nd - 1> phase;
+      SB::Coor<Nd - 1> phase, neg_aphase;
       for (int i = 0; i < Nd - 1; ++i)
       {
-	phase[i] = params.param.contract.phase[i];
-	if (std::fabs(phase[i] - params.param.contract.phase[i]) > 0)
-	  std::runtime_error("phase should be integer");
+	phase[i] = params.param.contract.quarkPhase[i];
+	neg_aphase[i] = -params.param.contract.aQuarkPhase[i];
+	if (std::fabs(phase[i] - params.param.contract.quarkPhase[i]) > 0 ||
+	    std::fabs(neg_aphase[i] + params.param.contract.aQuarkPhase[i]) > 0)
+	{
+	  std::runtime_error("phase, quarkPhase and aQuarkPhase should be integer");
+	}
       }
+      bool aphase_is_conj_phase = (phase == neg_aphase);
 
       //
       // Initialize the slow Fourier transform phases
@@ -1078,7 +1114,8 @@ namespace Chroma
 	write(metadata_xml, "moms", moms);
 	write(metadata_xml, "mass_label", params.param.contract.mass_label);
 	write(metadata_xml, "gammas", gammas);
-	write(metadata_xml, "eigen_phase", params.param.contract.phase);
+	write(metadata_xml, "eigen_phase", SB::tomulti1d(params.param.contract.quarkPhase));
+	write(metadata_xml, "eigen_aphase", SB::tomulti1d(params.param.contract.aQuarkPhase));
 	pop(metadata_xml);
 
 	// NOTE: metadata_xml only has a valid value on Master node; so do a broadcast
@@ -1137,7 +1174,8 @@ namespace Chroma
 	// and calling the relevant propagator routines.
 	//
 
-	std::vector<SB::Tensor<Nd + 5, SB::Complex>> invCache(Lt); // cache inversions
+	std::vector<SB::Tensor<Nd + 5, SB::Complex>> invCache(Lt); // cache inversions for phase
+	std::vector<SB::Tensor<Nd + 5, SB::Complex>> ainvCache(Lt); // cache inversions for neg_aphase
 
 	// Maximum number of linear system RHS solved at once 
 	const int max_rhs = params.param.contract.max_rhs;
@@ -1191,9 +1229,11 @@ namespace Chroma
 	    invCache[t_source] = SB::doInversion<SB::ComplexF, SB::Complex>(
 	      *PP, std::move(source_colorvec), t_source, active_tslices[t_source].from,
 	      active_tslices[t_source].size, {0, 1, 2, 3}, max_rhs, "cxyzXnSst");
+	    if (aphase_is_conj_phase)
+	      ainvCache[t_source] = invCache[t_source];
 	  }
 
-	  if (!invCache[t_sink])
+	  if (!ainvCache[t_sink])
 	  {
 	    // If this inversion is not going to be cache, just store tslices for this source-sink pair
 	    if (!cache_tslice[t_sink])
@@ -1204,20 +1244,22 @@ namespace Chroma
 
 	    // Get num_vecs colorvecs on time-slice t_sink
 	    SB::Tensor<Nd + 3, SB::ComplexF> sink_colorvec = SB::getColorvecs(
-	      colorvecsSto, u, decay_dir, t_sink, 1, num_vecs, SB::none, phase, dev);
+	      colorvecsSto, u, decay_dir, t_sink, 1, num_vecs, SB::none, neg_aphase, dev);
 
 	    // Invert the sink for all spins and retrieve num_tslices_active time-slices starting from
 	    // time-slice first_tslice_active
-	    invCache[t_sink] = SB::doInversion<SB::ComplexF, SB::Complex>(
+	    ainvCache[t_sink] = SB::doInversion<SB::ComplexF, SB::Complex>(
 	      *PP, std::move(sink_colorvec), t_sink, active_tslices[t_sink].from,
 	      active_tslices[t_sink].size, {0, 1, 2, 3}, max_rhs, "ScnsxyzXt");
+	    if (aphase_is_conj_phase)
+	      invCache[t_sink] = ainvCache[t_sink];
 	  }
 
 	  // The cache may have more tslices than need it; restrict to the ones required for this source-sink pair
 	  SB::Tensor<Nd + 5, SB::Complex> invSource = invCache[t_source].kvslice_from_size(
 	    {{'t', first_tslice_active - active_tslices[t_source].from}},
 	    {{'t', num_tslices_active}});
-	  SB::Tensor<Nd + 5, SB::Complex> invSink = invCache[t_sink].kvslice_from_size(
+	  SB::Tensor<Nd + 5, SB::Complex> invSink = ainvCache[t_sink].kvslice_from_size(
 	    {{'t', first_tslice_active - active_tslices[t_sink].from}},
 	    {{'t', num_tslices_active}});
 
@@ -1225,9 +1267,15 @@ namespace Chroma
 	  edges_on_tslice[t_source]--;
 	  edges_on_tslice[t_sink]--;
 	  if (edges_on_tslice[t_source] == 0 || !cache_tslice[t_source])
+	  {
 	    invCache[t_source].release();
+	    ainvCache[t_source].release();
+	  }
 	  if (edges_on_tslice[t_sink] == 0 || !cache_tslice[t_sink])
+	  {
 	    invCache[t_sink].release();
+	    ainvCache[t_sink].release();
+	  }
 
 	  // Contract the spatial components of sink and source together with
 	  // several momenta, gammas and displacements; but contract not more than
