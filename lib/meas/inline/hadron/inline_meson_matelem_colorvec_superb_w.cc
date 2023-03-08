@@ -122,7 +122,6 @@ namespace Chroma
       else
       {
 	param.quarkPhase.resize(Nd - 1);
-	param.aQuarkPhase.resize(Nd - 1);
       }
 
       if (paramtop.count("aQuarkPhase") == 1)
@@ -133,6 +132,13 @@ namespace Chroma
       {
 	for (float i : param.quarkPhase)
 	  param.aQuarkPhase.push_back(-i);
+      }
+
+      // Check the correct size of quarkPhase and aQuarkPhase
+      if (param.quarkPhase.size() != Nd - 1 || param.aQuarkPhase.size() != Nd - 1)
+      {
+	QDPIO::cerr << "phase, quarkPhase and aQuarkPhase tags should have " << Nd - 1 << " components" << std::endl;
+	QDP_abort(1);
       }
 
       param.link_smearing = readXMLGroup(paramtop, "LinkSmearing", "LinkSmearingType");
@@ -159,8 +165,8 @@ namespace Chroma
       write(xml, "Nt_forward", param.Nt_forward);
       write(xml, "max_tslices_in_contraction", param.max_tslices_in_contraction);
       write(xml, "max_moms_in_contraction", param.max_moms_in_contraction);
-      //write(xml, "quarkPhase", param.quarkPhase);
-      //write(xml, "aQuarkPhase", param.aQuarkPhase);
+      write(xml, "quarkPhase", SB::tomulti1d(param.quarkPhase));
+      write(xml, "aQuarkPhase", SB::tomulti1d(param.aQuarkPhase));
       xml << param.link_smearing.xml;
 
       pop(xml);
@@ -530,12 +536,6 @@ namespace Chroma
       //
       // Parse the phase
       //
-      if (params.param.quarkPhase.size() != Nd - 1 || params.param.aQuarkPhase.size() != Nd - 1)
-      {
-	QDPIO::cerr << "`phase', `quarkPhase', and `aQuarkPhase' tags should have " << Nd - 1
-		    << " components" << std::endl;
-	QDP_abort(1);
-      }
       SB::Coor<Nd - 1> leftphase, rightphase;
       for (int i = 0; i < Nd - 1; ++i)
       {
