@@ -227,6 +227,32 @@ if( Chroma_ENABLE_SUPERBBLAS )
   endif()
 endif()
 
+# Setting Kokkos stuff
+#####################################
+
+#For kokkos in line
+if( Chroma_ENABLE_KOKKOS )
+    add_subdirectory(other_libs/kokkos_src)
+    SET(Kokkos_ENABLE_HOST ON CACHE STRING "Setting Kokkos_ENABLE_HOST globally")
+    include_directories(${Kokkos_INCLUDE_DIRS})
+    message(STATUS "Kokkos include dirs=${Kokkos_INCLUDE_DIRS}")
+endif()
+
+
+#target_link_libraries(chromalib PUBLIC Kokkos::kokkos)
+SET(Kokkos_ENABLE_HIP ON CACHE STRING "Setting Kokkos_ENABLE_HIP globally")
+
+if(Kokkos_ENABLE_HIP)
+  add_compile_definitions(Kokkos_ENABLE_HIP=1)
+endif()
+
+if(Kokkos_ENABLE_OPENMP)
+  add_compile_definitions(Kokkos_ENABLE_OPENMP=1)
+endif()
+
+if(Chroma_ENABLE_KOKKOS)
+  add_compile_definitions(Chroma_ENABLE_KOKKOS=1)
+endif()
 
 #####################################
 # Configure chroma_config_internal.h
