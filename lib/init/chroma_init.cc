@@ -10,6 +10,7 @@
 #include "util/ferm/superb_contractions.h"
 
 #include "qdp_init.h"
+#include <Kokkos_Core.hpp>
 
 #if defined(BUILD_JIT_CLOVER_TERM)
 #if defined(QDPJIT_IS_QDPJITPTX)
@@ -133,7 +134,7 @@ namespace Chroma
     if (! QDP_isInitialized())
       QDP_initialize(argc, argv);
 #endif
-
+    Kokkos::initialize( *argc, *argv );
     for(int i=0; i < *argc; i++) 
     {
       // Get argv[i] into a std::string
@@ -377,6 +378,8 @@ namespace Chroma
 #ifdef BUILD_QUDA
     endQuda();
 #endif
+
+Kokkos::finalize();
 
 #ifdef BUILD_MGPROTO
 #ifdef MG_ENABLE_TIMERS
