@@ -11,6 +11,15 @@ if( Chroma_ENABLE_CPP_WILSON_DSLASH)
    target_link_libraries(chromalib PUBLIC CPPWilsonDslash::dslash)
 endif()
 
+SET(Kokkos_ENABLE_HIP ON)
+#add_subdirectory(kokkos_src)
+include_directories(${Kokkos_INCLUDE_DIRS})
+
+message(STATUS "Kokkos include dirs=${Kokkos_INCLUDE_DIRS}")
+
+message(STATUS "Kokkos Kokkos_ENABLE_HIP=${Kokkos_ENABLE_HIP}")
+
+target_link_libraries(chromalib PUBLIC Kokkos::kokkos)
 
 set(ChromaLIB_HEADERS
     chroma_config.h
@@ -413,6 +422,7 @@ set(ChromaLIB_HEADERS
 	util/ferm/block_couplings.h
 	util/ferm/disp_soln_cache.h
 	util/ft/sftmom.h
+    kokkos_util/kokkos_defs.h
     util/ft/single_phase.h
 	util/ft/time_slice_set.h
     util/gauge/eesu2.h
@@ -728,9 +738,11 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/simple_hadron_operator_w.h
 	meas/hadron/group_baryon_operator_w.h
 	meas/hadron/barhqlq_w.h
+    meas/hadron/barhqlq_w_kokkos.h
 	meas/hadron/baryon_w.h
 	meas/hadron/BuildingBlocks_w.h
 	meas/hadron/curcor2_w.h
+    meas/hadron/curcor2_w_kokkos.h
 	meas/hadron/curcor3_w.h
 	meas/hadron/formfac_w.h
 	meas/hadron/hadron_w.h
@@ -744,6 +756,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/stoch_cond_cont_w.h
 	meas/hadron/mesons_w.h
 	meas/hadron/mesons2_w.h
+    meas/hadron/mesons2_w_kokkos.h
 	meas/hadron/seqpiontest_w.h
 	meas/hadron/baryon_operator_aggregate_w.h
 	meas/hadron/baryon_operator_factory_w.h
@@ -1585,7 +1598,8 @@ target_sources(chromalib PRIVATE
 	meas/hadron/barcomp_diquark_w.cc 
 	meas/hadron/diquark_w.cc 
     meas/hadron/mescomp_w.cc 
-	meas/hadron/barhqlq_w.cc 
+	meas/hadron/barhqlq_w.cc
+    meas/hadron/barhqlq_w_kokkos.cc 
     meas/hadron/baryon_seqsrc_w.cc 
     meas/hadron/simple_baryon_seqsrc_w.cc 
 	meas/hadron/barspinmat_w.cc 
@@ -1595,6 +1609,7 @@ target_sources(chromalib PRIVATE
     meas/hadron/group_baryon_operator_w.cc 
 	meas/hadron/baryon_w.cc meas/hadron/BuildingBlocks_w.cc 
 	meas/hadron/curcor2_w.cc 
+    meas/hadron/curcor2_w_kokkos.cc
 	meas/hadron/curcor3_w.cc 
 	meas/hadron/formfac_w.cc 
 	meas/hadron/hybmeson_w.cc meas/hadron/loops_w.cc 
@@ -1606,7 +1621,8 @@ target_sources(chromalib PRIVATE
 	meas/hadron/delta_2pt_w.cc 
 	meas/hadron/stoch_cond_cont_w.cc 
     meas/hadron/mesons_w.cc 
-    meas/hadron/mesons2_w.cc 
+    meas/hadron/mesons2_w.cc
+    meas/hadron/mesons2_w_kokkos.cc 
 	meas/hadron/qqq_w.cc meas/hadron/qqbar_w.cc 
     meas/hadron/baryon_operator_aggregate_w.cc 
     meas/hadron/seqsource_aggregate_w.cc 
@@ -1837,6 +1853,15 @@ target_sources(chromalib PRIVATE
 	meas/inline/smear/inline_smear_aggregate.cc 
 	meas/inline/smear/inline_link_smear.cc
 )
+
+########################################################
+#  Inline Measurement sources w/wo Kokkos
+########################################################
+if(Chroma_ENABLE_KOKKOS)
+   target_sources(chromalib PRIVATE meas/inline/hadron/inline_hadspec_w_kokkos.cc)
+else()
+   target_sources(chromalib PRIVATE meas/inline/hadron/inline_hadspec_w.cc)
+endif()
 
 # Taken Out of original build Makefile.am
 #
