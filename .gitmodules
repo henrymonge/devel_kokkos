@@ -10,3 +10,6 @@
 [submodule "other_libs/wilsonmg"]
 	path = other_libs/wilsonmg
 	url = ../wilsonmg.git
+[submodule "other_libs/kokkos_src"]
+	path = other_libs/kokkos_src
+	url = https://github.com/kokkos/kokkos.git
