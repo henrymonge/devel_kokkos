@@ -29,7 +29,16 @@ using range_policy = Kokkos::RangePolicy<ExecSpace>;
 //Kokkos::View<T* [4][4][3][3][2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPViewType;
 //using QDPViewType = Kokkos::View<T*[Ns][Ns][Nc][Nc][2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>
 using FType=typename WordType<LatticePropagator>::Type_t;
+using WordLatticeComplexType=typename WordType<LatticeComplex>::Type_t;
+//using WordMulti1dIntType =WordType<multi1d<int>>::Type_t;
+
+
 typedef Kokkos::View<FType * [4][4][3][3][2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPViewType;
+typedef Kokkos::View<WordLatticeComplexType * [2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPLattComplexViewType;
+typedef Kokkos::View<int *,Kokkos::LayoutRight,Kokkos::HostSpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> View_int_1d_Unmag;
+
+
+//typedef Kokkos::View<WordMulti1dIntType * ,Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPMulti1dIntViewType;
 
 typedef Kokkos::View<Kokkos::complex<double> * [4][4][3][3],Kokkos_Layout,MemorySpace>  View_prop_type;
 typedef Kokkos::View<Kokkos::complex<double> [4][4][3][3],Kokkos_Layout,MemorySpace>  View_site_prop_type;
@@ -40,6 +49,7 @@ typedef Kokkos::View<QDP::RComplex<double> * [4][4][3][3],Kokkos_Layout,MemorySp
 typedef Kokkos::View<int *,Kokkos_Layout,MemorySpace>  View_LatticeInteger;
 
 typedef Kokkos::View<Kokkos::complex<double> **,Kokkos_Layout,MemorySpace>  View_LatticeComplex1d;
+typedef Kokkos::View<Kokkos::complex<double> *,Kokkos_Layout,MemorySpace>  View_LatticeComplex;
 
 
 typedef Kokkos::View<Kokkos::complex<double> * [16][4][4][3][3],Kokkos_Layout,MemorySpace>  View_prop_gamma_type;

@@ -79,55 +79,6 @@
 #include "chromabase.h"
 #include "util/ft/sftmom.h"
 #include "meas/hadron/mesons_w.h"
-#include "kokkos_util/kokkos_gamma_funcsTest.h"
-#include <chrono>
-#include <time.h>
-#include <fstream>
-#include <stdio.h>
-
-void propToFile(std::string propName, View_prop_gamma_type prop, int n, int g){
-
-  std::cout <<propName<<"=np.zeros(shape=(32,16,4,4,3,3))\n";
-  for ( int i = 0; i < 4; ++i ) {
-    for ( int j = 0; j < 4; ++j ) {
-      for ( int k = 0; k < 3; ++k ) {
-       for ( int l = 0; l < 3; ++l ) {
-            std::cout <<propName<<"["<<n<<","<<g<<","<<i<<","<<j<<","<<k<<","<<l<<"]=";
-            std::cout << prop(n,g,i,j,k,l).real() << "\n";
-       }
-      }
-    }
-  }
-}
-
-void propToFile(std::string propName, View_prop_type prop, int n){
-  std::cout <<propName<<"=np.zeros(shape=(32,4,4,3,3))\n";
-  for ( int i = 0; i < 4; ++i ) {
-    for ( int j = 0; j < 4; ++j ) {
-      for ( int k = 0; k < 3; ++k ) {
-       for ( int l = 0; l < 3; ++l ) {
-            std::cout <<propName<<"["<<n<<","<<i<<","<<j<<","<<k<<","<<l<<"]=";
-            std::cout << prop(n,i,j,k,l).real() << "\n";
-       }
-      }
-    }
-  } 
-}
-
-void propToFileQDP(std::string propName, LatticePropagator temp1, int n){
-  std::cout <<propName<<"=np.zeros(shape=(32,4,4,3,3))\n";
-  for ( int i = 0; i < 4; ++i ) {
-    for ( int j = 0; j < 4; ++j ) {
-      for ( int k = 0; k < 3; ++k ) {
-       for ( int l = 0; l < 3; ++l ) {
-            std::cout <<propName<<"["<<n<<","<<i<<","<<j<<","<<k<<","<<l<<"]=";
-            std::cout << temp1.elem(n).elem(i,j).elem(k,l).real() << "\n";
-       }
-      }
-    }
-  } 
-}
-
 
 namespace Chroma {
 
@@ -162,53 +113,12 @@ void mesons2(const LatticePropagator& quark_prop_1,
 {
   START_CODE();
 
-  
   // Length of lattice in decay direction
   int length = phases.numSubsets();
+
   // Construct the anti-quark propagator from quark_prop_2
   int G5 = Ns*Ns-1;
   LatticePropagator anti_quark_prop =  Gamma(G5) * quark_prop_2 * Gamma(G5);
-
-
-  QDPIO::cout << "\n\n***************\nUsing Kokkos Contractions GPU\n***************\n\n";
-
-
-
-  double time;
-  StopWatch swatch;
-  swatch.reset();
-  swatch.start();
-
-
-  //For CPU
-  //using MemSpace=Kokkos::HostSpace; 
-
-  //For GPU
-  using MemSpace=Kokkos::Experimental::HIP;
-
-  using ExecSpace = MemSpace::execution_space;
-  using range_policy = Kokkos::RangePolicy<ExecSpace>;
-
-  const QDP::Subset& sub = QDP::rb[0];
-
-  // Allocate y, x vectors and Matrix A on device.
-  int numSites = sub.siteTable().size();
-
-  View_corrs_type  view_corr("corr", numSites);
-
-  LatticePropagator adj_anti_quark_prop =  adj(anti_quark_prop);
- 
-  View_prop_type d_adj_anti_quark_prop("d_adj_anti-quark", numSites);
-  View_prop_type d_quark_prop1("d_quark", numSites);
-  View_Latt_spin_matrix_type s1("s1",numSites);
-  View_Latt_spin_matrix_type s2("s2",numSites);
-
-
-
-  // Create host mirrors of device views.
-  View_prop_type::HostMirror h_adj_anti_quark_prop = Kokkos::create_mirror_view( d_adj_anti_quark_prop );
-  View_prop_type::HostMirror h_quark_prop1 = Kokkos::create_mirror_view( d_quark_prop1 );
-  View_corrs_type::HostMirror h_view_corr = Kokkos::create_mirror_view( view_corr );
 
   // This variant uses the function SftMom::sft() to do all the work
   // computing the Fourier transform of the meson correlation function
@@ -216,73 +126,52 @@ void mesons2(const LatticePropagator& quark_prop_1,
   // momenta are stored.  It's primary disadvantage is that it
   // requires more memory because it does all of the Fourier transforms
   // at the same time.
-   
+
+  // Loop over gamma matrix insertions
+  XMLArrayWriter xml_gamma(xml,Ns*Ns);
+  push(xml_gamma, xml_group);
+
+  for (int gamma_value=0; gamma_value < (Ns*Ns); ++gamma_value)
+  {
+    push(xml_gamma);     // next array element
+    write(xml_gamma, "gamma_value", gamma_value);
+
+    // Construct the meson correlation function
+    LatticeComplex corr_fn;
+    corr_fn = trace(adj(anti_quark_prop) * (Gamma(gamma_value) *
+                    quark_prop_1 * Gamma(gamma_value)));
+
+    multi2d<DComplex> hsum;
+    hsum = phases.sft(corr_fn);
+
+    // Loop over sink momenta
+    XMLArrayWriter xml_sink_mom(xml_gamma,phases.numMom());
+    push(xml_sink_mom, "momenta");
+
+    for (int sink_mom_num=0; sink_mom_num < phases.numMom(); ++sink_mom_num) 
+    {
+      push(xml_sink_mom);
+      write(xml_sink_mom, "sink_mom_num", sink_mom_num);
+      write(xml_sink_mom, "sink_mom", phases.numToMom(sink_mom_num));
+
+      multi1d<DComplex> mesprop(length);
+      for (int t=0; t < length; ++t) 
+      {
+        int t_eff = (t - t0 + length) % length;
+	mesprop[t_eff] = hsum[sink_mom_num][t];
+      }
+
+      write(xml_sink_mom, "mesprop", mesprop);
+      pop(xml_sink_mom);
+
+    } // end for(sink_mom_num)
  
- // Loop over gamma matrix insertions
+    pop(xml_sink_mom);
+    pop(xml_gamma);
+  } // end for(gamma_value)
 
-  //Initialize kokkos props
-  //Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
+  pop(xml_gamma);
 
-  Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int n ) {
-    int qdp_index = sub.siteTable()[n];
-    for ( int i = 0; i  < 4; ++i ) {
-      for ( int j = 0; j < 4; ++j ) {
-        for ( int c1 = 0; c1  < 3; ++c1) {
-          for  ( int c2 = 0; c2  < 3; ++c2 ) {
-             h_adj_anti_quark_prop(n,i,j,c1,c2)=Kokkos::complex<double>( adj_anti_quark_prop.elem(qdp_index).elem(i,j).elem(c1,c2).real(),adj_anti_quark_prop.elem(qdp_index).elem(i,j).elem(c1,c2).imag());
-             h_quark_prop1(n,i,j,c1,c2)=Kokkos::complex<double>( quark_prop_1.elem(qdp_index).elem(i,j).elem(c1,c2).real(),quark_prop_1.elem(qdp_index).elem(i,j).elem(c1,c2).imag());
-          }
-        }
-      }
-    }
-  });
-
-
-  // Deep copy host views to device views.
-  Kokkos::deep_copy( d_adj_anti_quark_prop, h_adj_anti_quark_prop);
-  Kokkos::deep_copy( d_quark_prop1, h_quark_prop1 );
-    
-  //Parallel for to make the contractions
-  Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
-  // KokkosPropDotGamma(View_prop_type r,int gamma_value,View_prop_gamma_type d, int n, int c1, int c2)
-    for ( int c1 = 0; c1  < 3; ++c1 ) { 
-          for ( int c2 = 0; c2 < 3; ++c2 ) {
-            for (int gamma_value = 0; gamma_value < 16; gamma_value++){
-                KokkosPropDotGamma(d_adj_anti_quark_prop,gamma_value,s1,n, c1, c2);
-                KokkosPropDotGamma(d_quark_prop1,gamma_value,s2,n, c2, c1);
-                for ( int i = 0; i  < 4; ++i ) {
-                for  ( int j = 0; j  < 4; ++j ) {
-                   view_corr(n,gamma_value) += s1(n,i,j)*s2(n,j,i);               
-                }
-              }
-          }
-      }
-    }
-  });
-
-  Kokkos::fence();
-  
-  swatch.stop();
-  time=swatch.getTimeInSeconds();
-
-  Kokkos::deep_copy( h_view_corr, view_corr );
-
-  QDPIO::cout << "Time Contractions = " << time << " secs\n";
-  /*
-  std::ofstream out("out.py",std::ios_base::app);
-
-  auto *coutbuf = std::cout.rdbuf();
-  std::cout.rdbuf(out.rdbuf());
-  std::cout << "import numpy as np\n";
-
-
-  std::cout <<"C(n,0)_Kokkos= ";
-  for ( int n = 0; n < 9; ++n ) {
-      std::cout <<h_view_corr(n,0).real()<<" ";
-  }
-
-  std::cout.rdbuf(coutbuf); 
-  */
   END_CODE();
 }
 

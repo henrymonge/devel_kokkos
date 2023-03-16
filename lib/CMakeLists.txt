@@ -742,7 +742,6 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/baryon_w.h
 	meas/hadron/BuildingBlocks_w.h
 	meas/hadron/curcor2_w.h
-    meas/hadron/curcor2_w_kokkos.h
 	meas/hadron/curcor3_w.h
 	meas/hadron/formfac_w.h
 	meas/hadron/hadron_w.h
@@ -756,7 +755,6 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/stoch_cond_cont_w.h
 	meas/hadron/mesons_w.h
 	meas/hadron/mesons2_w.h
-    meas/hadron/mesons2_w_kokkos.h
 	meas/hadron/seqpiontest_w.h
 	meas/hadron/baryon_operator_aggregate_w.h
 	meas/hadron/baryon_operator_factory_w.h
@@ -1609,7 +1607,6 @@ target_sources(chromalib PRIVATE
     meas/hadron/group_baryon_operator_w.cc 
 	meas/hadron/baryon_w.cc meas/hadron/BuildingBlocks_w.cc 
 	meas/hadron/curcor2_w.cc 
-    meas/hadron/curcor2_w_kokkos.cc
 	meas/hadron/curcor3_w.cc 
 	meas/hadron/formfac_w.cc 
 	meas/hadron/hybmeson_w.cc meas/hadron/loops_w.cc 
@@ -1621,8 +1618,7 @@ target_sources(chromalib PRIVATE
 	meas/hadron/delta_2pt_w.cc 
 	meas/hadron/stoch_cond_cont_w.cc 
     meas/hadron/mesons_w.cc 
-    meas/hadron/mesons2_w.cc
-    meas/hadron/mesons2_w_kokkos.cc 
+    meas/hadron/mesons2_w.cc 
 	meas/hadron/qqq_w.cc meas/hadron/qqbar_w.cc 
     meas/hadron/baryon_operator_aggregate_w.cc 
     meas/hadron/seqsource_aggregate_w.cc 
@@ -1761,8 +1757,7 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_distillution_noise.cc 
 	meas/inline/hadron/inline_prop_distillation_w.cc 
 	meas/inline/hadron/inline_prop_distillation_stoch_w.cc 
-	meas/inline/hadron/inline_prop_distillution_w.cc 
-	meas/inline/hadron/inline_hadspec_w.cc 
+	meas/inline/hadron/inline_prop_distillution_w.cc  
 	meas/inline/hadron/inline_mesonspec_w.cc 
 	meas/inline/hadron/inline_heavyhadspec_w.cc 
 	meas/inline/hadron/inline_static_light_spec_w.cc 
