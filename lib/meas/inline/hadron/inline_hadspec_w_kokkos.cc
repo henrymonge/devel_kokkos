@@ -564,6 +564,9 @@ namespace Chroma
       std::string source_sink_type = src_type + "_" + snk_type;
       QDPIO::cout << "Source type = " << src_type << std::endl;
       QDPIO::cout << "Sink type = "   << snk_type << std::endl;
+     StopWatch tClock;
+     tClock.reset();
+     tClock.start();
 
       //Use kokkos routines on device 
       //################################################
@@ -581,7 +584,7 @@ namespace Chroma
       View_prop_type d_sink_prop2("d_sink_prop2", numSites);
 
         //Here we get the prop directly from the qdp-jit pointer
-      Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
+      Kokkos::parallel_for( "Device props init",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
           for ( int i = 0; i  < 4; ++i ) {
             for ( int j = 0; j < 4; ++j ) {
               for ( int c1 = 0; c1  < 3; ++c1) {
@@ -599,7 +602,13 @@ namespace Chroma
           }
 
       });
-        
+       
+
+     tClock.stop();
+     QDPIO::cout << "1 Total time up to  here = "
+        << tClock.getTimeInSeconds()
+        << " secs" << std::endl;
+ 
       int num_mom=phases.numMom();
       int  numSubsets = phases.numSubsets();
       int myVol=Layout::vol();
@@ -610,6 +619,10 @@ namespace Chroma
       int sitesInSets=0;
       int realSets=0;
       int setMaxSize=0;
+     //StopWatch tClock;
+     tClock.reset();
+     tClock.start();
+
    
       for (int k=0;k<phases.getSet().numSubsets();k++){
             sitesInSets+=phases.getSet()[k].siteTable().size();
@@ -630,7 +643,7 @@ namespace Chroma
          raw_qdp_jit_pointer1 = QDP_get_global_cache().get_dev_ptr( phases[mom_num].getId() );
          QDPLattComplexViewType view_of_phases_mom_num(  (WordLatticeComplexType *) raw_qdp_jit_pointer1, numSites );
          
-         Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
+         Kokkos::parallel_for( "Phases init",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
            double re1 = view_of_phases_mom_num( nSite, 0);
            double im1 = view_of_phases_mom_num( nSite, 1);           
            d_phases(mom_num,nSite) = Kokkos::complex<double>(re1,im1);
@@ -648,7 +661,7 @@ namespace Chroma
           //const int* the_ptr = my_array.slice();  
           View_int_1d_Unmag sets_view(  (int *) phases.getSet()[k].siteTable().slice(),d_sft_sets.extent(1));
           //QDPMulti1dIntViewType view_of_phases_mom_num(  (WordMulti1dIntType *) phases.getSet()[k].siteTable(),d_sft_sets.extent(1));            
-          Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,d_sft_sets.extent(1)), KOKKOS_LAMBDA ( int nSite ){
+          Kokkos::parallel_for( "Sets init loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,d_sft_sets.extent(1)), KOKKOS_LAMBDA ( int nSite ){
              //h_sft_sets(k,nSite) = h_idx_map(sft_set[k].siteTable()[nSite]);
              h_sft_sets(k,nSite) = sets_view(nSite);
           });
@@ -660,8 +673,14 @@ namespace Chroma
      }
  
      Kokkos::fence();
+
+
+     tClock.stop();
+     QDPIO::cout << "Total time up to  here = "
+        << tClock.getTimeInSeconds()
+        << " secs" << std::endl;
+
      QDPIO::cout << "Done Sending sink_prop_1/sink_prop_2 to device= " << std::endl;
-      
 
       // Do the mesons first
       if (params.param.MesonP) 
@@ -682,7 +701,10 @@ namespace Chroma
 		  xml_out, src_type + "_Point_Meson_Currents");
 	}
       } // end if (CurrentP)
-      
+
+
+     tClock.reset();
+     tClock.start();      
 
       // Do the baryons
       if (params.param.BaryonP) 
@@ -695,6 +717,14 @@ namespace Chroma
         xml_out, source_sink_type + "_Wilson_Baryons");
     
       } // end if (BaryonP)
+
+
+
+     tClock.stop();
+     QDPIO::cout << "Total bar conts = "
+        << tClock.getTimeInSeconds()
+        << " secs" << std::endl;
+
 
       pop(xml_out);  // array element
     }

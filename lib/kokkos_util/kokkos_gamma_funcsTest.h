@@ -472,6 +472,20 @@ KOKKOS_INLINE_FUNCTION void kokkos_SitePropDotSpinMatrix(int nSite, auto prop_ou
     }
 }
 
+/*
+KOKKOS_INLINE_FUNCTION void kokkos_SitePropDotSpinMatrix(auto prop_out, auto prop, auto sm){
+ 
+    for (int i=0; i<3;i++){
+      for (int j=0; j<3;j++){
+        auto p_out=Kokkos::subview(prop_out,Kokkos::ALL,Kokkos::ALL,i,j);
+        auto p_in=Kokkos::subview(prop,Kokkos::ALL,Kokkos::ALL,i,j);
+        kokkos_SpinMatrixProduct(p_out, p_in, sm);
+      }
+    }
+}
+*/
+
+
 KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(int nSite,auto prop_out, auto sm, auto prop){
 
     for (int i=0; i<3;i++){
@@ -482,6 +496,20 @@ KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(int nSite,auto prop_out
       }
     }
 }
+
+/*
+KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(auto prop_out, auto sm, auto prop){
+
+    for (int i=0; i<3;i++){
+      for (int j=0; j<3;j++){
+        auto p_out=Kokkos::subview(prop_out,Kokkos::ALL,Kokkos::ALL,i,j);
+        auto p_in=Kokkos::subview(prop,Kokkos::ALL,Kokkos::ALL,i,j);
+        kokkos_SpinMatrixProduct(p_out, sm,p_in);
+      }
+    }
+}
+
+*/
 
 KOKKOS_INLINE_FUNCTION void kokkos_propSpinTrace(auto cmat, auto prop){
 

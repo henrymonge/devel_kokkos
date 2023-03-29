@@ -26,7 +26,7 @@ namespace Chroma
 
     //! Cascade 2-pt
     /*! \ingroup hadron */
-    KOKKOS_INLINE_FUNCTION void kokkos_xi2pt(auto k_b_prop, auto quark_propagator_1,
+    void kokkos_xi2pt(auto k_b_prop, auto quark_propagator_1,
                                    auto quark_propagator_2,
                                    View_spin_matrix_type T, View_spin_matrix_type sp);
 

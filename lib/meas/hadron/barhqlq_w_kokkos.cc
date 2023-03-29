@@ -21,7 +21,8 @@ namespace Chroma
 
     //! Cascade 2-pt
     /*! \ingroup hadron */
-    KOKKOS_INLINE_FUNCTION void kokkos_xi2pt(auto k_b_prop, auto quark_propagator_1,
+     //KOKKOS_INLINE_FUNCTION
+     void kokkos_xi2pt(auto k_b_prop, auto quark_propagator_1,
                                    auto quark_propagator_2,
                                    View_spin_matrix_type T, View_spin_matrix_type sp)
     {
@@ -64,9 +65,13 @@ namespace Chroma
         kokkos_PropColorMatrixProduct(sub_tmp2, q_prop_1, sub_ctmp); 
         kokkos_SpinMatrixDotSiteProp(nSite,tmp1,T,tmp2);
         k_b_prop(nSite) += kokkos_site_prop_trace(sub_tmp1);
-
         
      }); //End kokkos parallel_for
+    Kokkos::fence();
+       //Tag tClock.stop();
+       //double time = timer.seconds();
+       //QDPIO::cout << "Total in kokkos_xi2pt ins conts = " << tClock.getTimeInSeconds() << " secs" << std::endl;
+
 
 #endif
     }
@@ -121,7 +126,7 @@ namespace Chroma
         k_b_prop(nSite) += kokkos_site_prop_trace(sub_tmp1);
 
      }); //End kokkos parallel_for
-
+    Kokkos::fence();
 #endif
     }
 
@@ -186,7 +191,7 @@ namespace Chroma
 
      }); //End kokkos parallel_for
 
-
+    Kokkos::fence();
 
 
 #endif
@@ -229,7 +234,7 @@ namespace Chroma
         k_b_prop(nSite) = kokkos_site_prop_trace(sub_tmp1);
 
       }); //End kokkos parallel_for
-
+    Kokkos::fence();
 #endif
     }
 
@@ -265,7 +270,7 @@ namespace Chroma
         //di_quark = quarkContract13(quark_propagator_1 * sp,sp * quark_propagator_2);
         kokkos_SitePropDotSpinMatrix(nSite,tmp1, quark_propagator_1, sp);
         kokkos_SpinMatrixDotSiteProp(nSite,tmp2, sp, quark_propagator_2);
-        kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
+        //kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
         //b_prop  = trace(T * traceColor(quark_propagator_2 * di_quark))
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
@@ -281,7 +286,7 @@ namespace Chroma
         //di_quark = quarkContract13(quark_propagator_2 * sp,sp * quark_propagator_1);
         kokkos_SitePropDotSpinMatrix(nSite,tmp1, quark_propagator_2, sp);
         kokkos_SpinMatrixDotSiteProp(nSite,tmp2, sp, quark_propagator_1);
-        kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
+        //kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
        //b_prop += trace(T * traceColor(quark_propagator_2 * di_quark));
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
@@ -291,7 +296,7 @@ namespace Chroma
         //di_quark = quarkContract13(quark_propagator_2 * sp,sp * quark_propagator_2);
         kokkos_SitePropDotSpinMatrix(nSite,tmp1, quark_propagator_2, sp);
         kokkos_SpinMatrixDotSiteProp(nSite,tmp2, sp, quark_propagator_2);
-        kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
+        //kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
      
         //b_prop += trace(T * traceColor(quark_propagator_1 * di_quark));
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_1, sub_di_quark);
@@ -308,7 +313,7 @@ namespace Chroma
         k_b_prop(nSite) += kokkos_site_prop_trace(sub_tmp1);
 
       }); //End kokkos parallel_for
-      
+    Kokkos::fence(); 
 #endif
     }
 
@@ -350,7 +355,7 @@ namespace Chroma
            const std::string& xml_group)
   {
     START_CODE();
-  
+   
   QDPIO::cout << "\n\n***************\nUsing Kokkos barhqlq Code GPU\n***************\n\n";
 
   double time;
@@ -368,8 +373,22 @@ namespace Chroma
     multi3d<DComplex> bardisp1;
     multi3d<DComplex> bardisp2;
 
+
+  swatch.reset();
+  swatch.start();
     
     barhqlq(propagator_1, propagator_2, d_phases, doSet, d_sft_sets, bardisp1);
+
+
+  swatch.stop();
+  time=swatch.getTimeInSeconds();
+
+  QDPIO::cout << "Kokkos barhqlq contraction time  = " << time << " secs\n";
+
+
+  
+  swatch.reset();
+  swatch.start();
 
     // Possibly add in a time-reversed contribution
     bool time_revP = (bc_spec*bc_spec == 1) ? time_rev : false;
@@ -401,12 +420,14 @@ namespace Chroma
         kokkos_multiply_view_prop(-1, d_q1_tmp, nSite);
         kokkos_multiply_view_prop(-1, d_q2_tmp, nSite);
       });
+    Kokkos::fence();
       barhqlq(d_q1_tmp, d_q2_tmp, d_phases, doSet, d_sft_sets, bardisp2);
       //barhqlq(d_q1_tmp, d_q2_tmp, phases, bardisp2);
     }    
-
-
-
+  /*
+  swatch.reset();
+  swatch.start();
+  
     int num_baryons = bardisp1.size3();
     int num_mom = bardisp1.size2();
     int length  = bardisp1.size1();
@@ -414,7 +435,7 @@ namespace Chroma
     // Loop over baryons
     XMLArrayWriter xml_bar(xml,num_baryons);
     push(xml_bar, xml_group);
-
+   
     for(int baryons = 0; baryons < num_baryons; ++baryons)
     {
       push(xml_bar);     // next array element
@@ -464,7 +485,7 @@ namespace Chroma
 	  }
 	}
     
-
+    
 	write(xml_sink_mom, "barprop", barprop);
 	pop(xml_sink_mom);
       } // end for(sink_mom_num)
@@ -477,8 +498,8 @@ namespace Chroma
   
   swatch.stop();
   time=swatch.getTimeInSeconds();
-
-  QDPIO::cout << "Time Contractions = " << time << " secs\n";
+  */
+  //QDPIO::cout << "Time after barqh Contractions = " << time << " secs\n";
   
     END_CODE();
   }
@@ -559,7 +580,13 @@ namespace Chroma
     START_CODE();
 
 
-    QDPIO::cout << "Now running kokkos barhqlq code\n";
+    double total_time=0;
+	StopWatch tClock;
+     tClock.reset();
+     tClock.start();
+
+
+    //QDPIO::cout << "Now running kokkos barhqlq code\n";
     int nodeNumber=Layout::nodeNumber();
     const QDP::Subset& sub = QDP::all;
     int numSites = sub.siteTable().size();
@@ -655,14 +682,21 @@ namespace Chroma
     View_corr_type k_b_prop("k_b_prop",numSites);
     View_corr_type::HostMirror h_k_b_prop = Kokkos::create_mirror_view( k_b_prop );
    
-    //Printing out values to compare
-    auto *coutbuf = std::cout.rdbuf();
-    std::ofstream out("bars.py",std::ios_base::app);
-    std::cout.rdbuf(out.rdbuf());
+     tClock.stop();
+     QDPIO::cout << "Total data movement time = "<< tClock.getTimeInSeconds() << " secs" << std::endl;
 
+     total_time +=tClock.getTimeInSeconds();
+    //Printing out values to compare
+    //auto *coutbuf = std::cout.rdbuf();
+    //std::ofstream out("bars.py",std::ios_base::app);
+    //std::cout.rdbuf(out.rdbuf());
+
+    double time=0;
     // Loop over baryons
     for(int baryons = 0; baryons < num_baryons; ++baryons)  
     {
+      tClock.reset();
+      tClock.start();
       switch (baryons)
       {
       case 0:
@@ -778,6 +812,7 @@ namespace Chroma
     Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) { 
        k_b_prop(nSite) *= 4.0;
     });
+    Kokkos::fence();
     
 	break;
 
@@ -867,25 +902,40 @@ namespace Chroma
 	    QDP_error_exit("Unknown baryon", baryons);
     }
 
-    Kokkos::deep_copy( h_k_b_prop, k_b_prop);
-      
+    tClock.stop();
+    total_time+=tClock.getTimeInSeconds();
+    QDPIO::cout << "Total in case " << baryons <<" = " << tClock.getTimeInSeconds() << " secs" << std::endl;
+    //Kokkos::deep_copy( h_k_b_prop, k_b_prop);
+
+      //StopWatch tClock;
+      tClock.reset();
+      tClock.start();      
                        
     //Project onto zero and if desired non-zero momentum
     multi2d<DComplex> kokkos_hsum;
     kokkos_hsum = kokkos_sft(doSet, d_sft_sets, k_b_prop,d_phases);
 
     for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
-        QDPIO::cout<<"\n"<<sink_mom_num<<"  Kokkos_hsum vs hsum  =   "<<kokkos_hsum[sink_mom_num][0].elem().elem().elem().real();
-        QDPIO::cout<< "\n*************\n";
+        //QDPIO::cout<<"\n"<<sink_mom_num<<"  Kokkos_hsum vs hsum  =   "<<kokkos_hsum[sink_mom_num][0].elem().elem().elem().real();
+        //QDPIO::cout<< "\n*************\n";
 	    for(int t = 0; t < length; ++t)
     	 {
 	       // NOTE: there is NO  1/2  multiplying hsum
 	       barprop[baryons][sink_mom_num][t] = kokkos_hsum[sink_mom_num][t];
 	     }
       }
+      tClock.stop();
+      time += tClock.getTimeInSeconds();
+      total_time+=tClock.getTimeInSeconds();
     } // end loop over baryons
 
-    std::cout.rdbuf(coutbuf);
+
+    QDPIO::cout << "Total for sft baryons  = " << time << " secs" << std::endl;
+
+    QDPIO::cout << "Total for time for this routine  = " << total_time << " secs" << std::endl;
+
+
+    //std::cout.rdbuf(coutbuf);
     
     END_CODE();
   }
