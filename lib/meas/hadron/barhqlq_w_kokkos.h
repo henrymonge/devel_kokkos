@@ -10,6 +10,8 @@
 #include "util/ft/sftmom.h"
 #include "kokkos_util/kokkos_defs.h"
 
+
+
 namespace Chroma 
 {
 
@@ -19,31 +21,52 @@ namespace Chroma
   {
     //! Sigma 2-pt
     /*! \ingroup hadron */
-
-    Kokkos::complex<double> kokkos_sigma2pt(View_prop_type quark_propagator_1,
+    void  kokkos_sigma2pt(View_prop_type quark_propagator_1,
                                    View_prop_type quark_propagator_2,
                                    View_spin_matrix_type T, View_spin_matrix_type sp);
 
     //! Cascade 2-pt
     /*! \ingroup hadron */
+     KOKKOS_INLINE_FUNCTION
+     void kokkos_xi2pt(int nSite, auto k_b_prop, auto quark_propagator_1,auto quark_propagator_2,
+                       View_spin_matrix_type T, View_spin_matrix_type sp, auto tmp1, auto tmp2,
+                       auto di_quark, auto stmp1, auto stmp2, auto ctmp);
+
     void kokkos_xi2pt(auto k_b_prop, auto quark_propagator_1,
                                    auto quark_propagator_2,
                                    View_spin_matrix_type T, View_spin_matrix_type sp);
 
     //! Lambda 2-pt
     //! \ingroup hadron //
+    KOKKOS_INLINE_FUNCTION 
+    void  kokkos_lambda2pt(int nSite, auto k_b_prop, auto quark_propagator_1,auto quark_propagator_2,
+                           View_spin_matrix_type T, View_spin_matrix_type sp, auto tmp1, auto tmp2,
+                       auto di_quark, auto stmp1, auto stmp2, auto ctmp);
+
+
     KOKKOS_INLINE_FUNCTION void  kokkos_lambda2pt(auto k_b_prop, auto quark_propagator_1,
                                                   auto quark_propagator_2,
                                                   View_spin_matrix_type T, View_spin_matrix_type sp);
 
     //! Lambda 2-pt
     //! \ingroup hadron //
+    KOKKOS_INLINE_FUNCTION 
+    void  kokkos_lambdaNaive2pt(int nSite, auto k_b_prop, auto quark_propagator_1,auto quark_propagator_2,
+                                View_spin_matrix_type T, View_spin_matrix_type sp, auto tmp1, auto tmp2,
+                                auto di_quark, auto stmp1, auto stmp2, auto ctmp);
+
+
     KOKKOS_INLINE_FUNCTION void  kokkos_lambdaNaive2pt(auto k_b_prop, auto quark_propagator_1,
                                                   auto quark_propagator_2,
                                                   View_spin_matrix_type T, View_spin_matrix_type sp);
 
     //! Delta 2-pt
     //! \ingroup hadron //
+    KOKKOS_INLINE_FUNCTION 
+    void  kokkos_sigmast2pt(int nSite, auto k_b_prop, auto quark_propagator_1,auto quark_propagator_2,
+                            View_spin_matrix_type T, View_spin_matrix_type sp, auto tmp1, auto tmp2,
+                                auto di_quark, auto stmp1, auto stmp2, auto ctmp);   
+
     KOKKOS_INLINE_FUNCTION void  kokkos_sigmast2pt(auto k_b_prop, auto quark_propagator_1,
                                                   auto quark_propagator_2,
                                                   View_spin_matrix_type T, View_spin_matrix_type sp);    
