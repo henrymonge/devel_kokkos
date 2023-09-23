@@ -574,6 +574,57 @@ namespace Chroma
       const QDP::Subset& sub = QDP::all;
       int numSites = sub.siteTable().size();
 
+
+      //Old way to move to gpu
+        View_prop_type o_d_sink_prop1("o_d_sink_prop1", numSites);
+        View_prop_type o_d_sink_prop2("o_d_sink_prop2", numSites);
+
+        View_prop_type::HostMirror o_h_sink_prop1 = Kokkos::create_mirror_view( o_d_sink_prop1 );
+        View_prop_type::HostMirror o_h_sink_prop2 = Kokkos::create_mirror_view( o_d_sink_prop2 );
+
+
+      
+
+
+
+        Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int n ) {
+          int qdp_index = sub.siteTable()[n];
+
+          for ( int i = 0; i  < 4; ++i ) {
+            for ( int j = 0; j < 4; ++j ) {
+              for ( int c1 = 0; c1  < 3; ++c1) {
+                for  ( int c2 = 0; c2  < 3; ++c2 ) {
+                  o_h_sink_prop1(n,i,j,c1,c2)=QDPtoKokkosComplex(sink_prop_1.elem(qdp_index).elem(i,j).elem(c1,c2));
+                  o_h_sink_prop2(n,i,j,c1,c2)=QDPtoKokkosComplex(sink_prop_2.elem(qdp_index).elem(i,j).elem(c1,c2));
+                }
+              }
+            }
+          }
+
+       });
+
+
+      Kokkos::deep_copy( o_d_sink_prop1, o_h_sink_prop1);
+      Kokkos::deep_copy( o_d_sink_prop2, o_h_sink_prop2 );
+
+      Kokkos::fence();
+
+      //########################
+
+      View_LatticeInteger qdp_indices("qdp_indices", numSites);
+      View_LatticeInteger::HostMirror h_qdp_indices = Kokkos::create_mirror_view( qdp_indices );  
+      View_LatticeInteger kokkos_indices("kokkos_indices", numSites);
+      View_LatticeInteger::HostMirror h_kokkos_indices = Kokkos::create_mirror_view( kokkos_indices );
+
+ 
+      Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int n ) {
+          int qdp_index = sub.siteTable()[n];
+          h_qdp_indices(n)=qdp_index;
+          h_kokkos_indices(qdp_index)=n;
+
+      });
+      Kokkos::deep_copy(qdp_indices, h_qdp_indices);
+
       void *raw_qdp_jit_pointer1 = QDP_get_global_cache().get_dev_ptr( sink_prop_1.getId() );
       QDPViewType view_of_sink_prop_1(  (FType *) raw_qdp_jit_pointer1, numSites );
 
@@ -582,18 +633,20 @@ namespace Chroma
 
       View_prop_type d_sink_prop1("d_sink_prop1", numSites);
       View_prop_type d_sink_prop2("d_sink_prop2", numSites);
+      View_prop_type::HostMirror h_sink_prop1 = Kokkos::create_mirror_view( d_sink_prop1 );
+      View_prop_type::HostMirror h_sink_prop2 = Kokkos::create_mirror_view( d_sink_prop2 );
 
-        //Here we get the prop directly from the qdp-jit pointer
+      //Here we get the prop directly from the qdp-jit pointer
       Kokkos::parallel_for( "Device props init",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
           for ( int i = 0; i  < 4; ++i ) {
             for ( int j = 0; j < 4; ++j ) {
               for ( int c1 = 0; c1  < 3; ++c1) {
                 for  ( int c2 = 0; c2  < 3; ++c2 ){
                    //double re2 = view_of_qdpjit;
-                   double re1 = view_of_sink_prop_1( n, i , j, c1, c2, 0);
-                   double im1 = view_of_sink_prop_1( n, i , j, c1, c2, 1);
-                   double re2 = view_of_sink_prop_2( n, i , j, c1, c2, 0);
-                   double im2 = view_of_sink_prop_2( n, i , j, c1, c2, 1);
+                   double re1 = view_of_sink_prop_1( qdp_indices(n), i , j, c1, c2, 0);
+                   double im1 = view_of_sink_prop_1( qdp_indices(n), i , j, c1, c2, 1);
+                   double re2 = view_of_sink_prop_2( qdp_indices(n), i , j, c1, c2, 0);
+                   double im2 = view_of_sink_prop_2( qdp_indices(n), i , j, c1, c2, 1);
                    d_sink_prop1(n,i,j,c1,c2)=Kokkos::complex<double>(re1,im1);
                    d_sink_prop2(n,i,j,c1,c2)=Kokkos::complex<double>(re2,im2);
                 }
@@ -603,6 +656,19 @@ namespace Chroma
 
       });
        
+
+      Kokkos::deep_copy( h_sink_prop1, d_sink_prop1);
+      Kokkos::deep_copy( h_sink_prop2, d_sink_prop2 );
+
+      int nodeNumber=Layout::nodeNumber();
+
+
+      double mytmp=(h_sink_prop2(0,1,2,2,1).real()-o_h_sink_prop2(0,1,2,2,1).real())/o_h_sink_prop2(0,1,2,2,1).real();
+      
+        QDPIO::cout<<"\nh_sink_prop2-o_h_sink_prop2="<<mytmp<<"\n";
+
+      
+
 
      tClock.stop();
      QDPIO::cout << "1 Total time up to  here = "
@@ -615,7 +681,7 @@ namespace Chroma
       int nodeVol = Layout::sitesOnNode();
 
       //Set sft_set=phases.getSet();
-      
+            
       int sitesInSets=0;
       int realSets=0;
       int setMaxSize=0;
@@ -636,7 +702,10 @@ namespace Chroma
 
      
       View_LatticeComplex1d d_phases("d_phases",num_mom,numSites);
-      View_int_2d d_sft_sets("d_sft_sets", numSubsets,sitesInSets/realSets);
+      View_LatticeInteger d_sft_sets("d_sft_sets", numSites);
+
+      View_LatticeComplex1d::HostMirror h_phases = Kokkos::create_mirror_view( d_phases);
+
 
 
       for (int mom_num=0; mom_num < num_mom; ++mom_num){
@@ -644,36 +713,33 @@ namespace Chroma
          QDPLattComplexViewType view_of_phases_mom_num(  (WordLatticeComplexType *) raw_qdp_jit_pointer1, numSites );
          
          Kokkos::parallel_for( "Phases init",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
-           double re1 = view_of_phases_mom_num( nSite, 0);
-           double im1 = view_of_phases_mom_num( nSite, 1);           
+           double re1 = view_of_phases_mom_num( qdp_indices(nSite), 0);
+           double im1 = view_of_phases_mom_num( qdp_indices(nSite), 1);           
            d_phases(mom_num,nSite) = Kokkos::complex<double>(re1,im1);
+           //d_phases(mom_num,nSite) = Kokkos::complex<double>(1,1);
+
         });
       }
 
-     View_int_2d::HostMirror h_sft_sets = Kokkos::create_mirror_view( d_sft_sets);
+    Kokkos::deep_copy( h_phases, d_phases );
+
+    View_LatticeInteger::HostMirror h_sft_sets = Kokkos::create_mirror_view( d_sft_sets);
+
+
+     QDPIO::cout << phases.getSet()[1].siteTable()[0]<<std::endl;
 
      multi1d<bool> doSet;
      doSet.resize(numSubsets);
-     for (int k=0; k < d_sft_sets.extent(0); ++k){
-        if (phases.getSet()[k].siteTable().size()!=0){
-          //raw_qdp_jit_pointer1 = phases.getSet()[k].slice();
-          //multi1d<int> my_array(6);
-          //const int* the_ptr = my_array.slice();  
-          View_int_1d_Unmag sets_view(  (int *) phases.getSet()[k].siteTable().slice(),d_sft_sets.extent(1));
-          //QDPMulti1dIntViewType view_of_phases_mom_num(  (WordMulti1dIntType *) phases.getSet()[k].siteTable(),d_sft_sets.extent(1));            
-          Kokkos::parallel_for( "Sets init loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,d_sft_sets.extent(1)), KOKKOS_LAMBDA ( int nSite ){
-             //h_sft_sets(k,nSite) = h_idx_map(sft_set[k].siteTable()[nSite]);
-             h_sft_sets(k,nSite) = sets_view(nSite);
+
+    Kokkos::parallel_for( "Sets init loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int nSite ){
+             int qdp_index = sub.siteTable()[nSite];
+             h_sft_sets(nSite) = Layout::latticeCoordinate(3).elem(qdp_index).elem().elem().elem().elem();
           });
-          doSet[k]=true;
-        }
-        else{
-          doSet[k]=false;
-        }
-     }
- 
+
+
      Kokkos::fence();
 
+     Kokkos::deep_copy( d_sft_sets, h_sft_sets );
 
      tClock.stop();
      QDPIO::cout << "Total time up to  here = "

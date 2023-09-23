@@ -11,6 +11,7 @@
 
 using namespace QDP;
 
+
 /*
 KOKKOS_INLINE_FUNCTION void phases_to_View(auto view_phases, SftMom phases){
     const QDP::Subset& sub = QDP::all;
@@ -51,27 +52,6 @@ KOKKOS_INLINE_FUNCTION void phases_to_View(auto view_phases, SftMom phases){
     for(int i=0; i < ss.numSubsets(); ++i)
       dest(k,i) = sum(s1[k],ss[i]);
 
-*/
-
-/*
-KOKKOS_INLINE_FUNCTION void kokkos_sft(auto cf, Set sft_set, auto view_phases, auto hsum){
-
-  for (int mom_num=0; mom_num < num_mom; ++mom_num){
-      //loop over sft_set
-    for (int k = 0; k < sft_set.numSubsets();k++){
-      int numSites = sub.siteTable().size();
-      Kokkos::parallel_reduce("Loop1", N, KOKKOS_LAMBDA (const int& i, double& lsum ) {
-
-        lsum += 1.0*i;
-        },result);
-    } 
-    //for(int i = 0; i < sft_set.numSubsets();i ++ ){
-     
-     //hsum[mom_num] = sumMulti(phases[mom_num]*cf, sft_set) ;
-     
-   // }
-  }
-}
 */
 
 /*
@@ -182,27 +162,41 @@ KOKKOS_INLINE_FUNCTION Kokkos::complex<double> QDPtoKokkosComplex(const QDP::RCo
 }
 */
 
-/*
-KOKKOS_INLINE_FUNCTION void kokkos_sft( auto corr, View_int_2d d_sft_sets, View_corr_type k_b_prop, auto d_phases){
-  int sets = d_sft_sets.extent(0);
- 
-  typedef Kokkos::TeamPolicy<>               team_policy;
-  typedef Kokkos::TeamPolicy<>::member_type  member_type;
+void writeb_prop(auto b_prop,int baryon,auto sft_set){
 
 
-  Kokkos::parallel_for( "kokkos sft", team_policy( sets, Kokkos::AUTO ), KOKKOS_LAMBDA ( const member_type &teamMember) {
-      const int j = teamMember.league_rank();
-      int numSites = d_sft_sets.extent(1);
-      Kokkos::complex<double> result=0;
-      Kokkos::Sum<Kokkos::complex<double>> complexSum(result);
+    View_LatticeInteger::HostMirror h_sft_set = Kokkos::create_mirror_view( sft_set);
+    Kokkos::deep_copy( h_sft_set, sft_set );
 
-      Kokkos::parallel_reduce( Kokkos::TeamThreadRange( teamMember, numSites), [&] ( const int i, Kokkos::complex<double> &innerUpdate ) {
-        innerUpdate += d_phases(d_sft_sets(j,i),0)*k_b_prop(d_sft_sets(j,i));
-      },complexSum);
-      corr(j)=result;
-    });
+    auto *coutbuf = std::cout.rdbuf();
+    std::ofstream out("bars_"+to_string(baryon)+".py",std::ios_base::app);
+    std::cout.rdbuf(out.rdbuf());
+
+    multi1d<LatticeInteger> my_coord(Nd);
+    multi1d<LatticeInteger> mom(3);
+    for (int mu=0; mu < Nd; ++mu)
+      my_coord[mu] = Layout::latticeCoordinate(mu);    
+    const QDP::Subset& sub = QDP::all;
+
+    if(QDP::Layout::nodeNumber() ==0){
+       QDPIO::cout<<"\n import numpy as np\n";
+       for(int k=0;k<h_sft_set.extent(0);k++){
+         int qdp_index = sub.siteTable()[k];
+         if(h_sft_set(k)==0){ 
+             int x=my_coord[0].elem(qdp_index).elem().elem().elem().elem();
+             int y=my_coord[1].elem(qdp_index).elem().elem().elem().elem();
+             int z=my_coord[2].elem(qdp_index).elem().elem().elem().elem();
+             int t=my_coord[3].elem(qdp_index).elem().elem().elem().elem();
+             QDPIO::cout<<"k_b_prop["<<x<<","<<y<<","<<z<<","<<t<<"]=" << b_prop(k,baryon).real()<<"+"<< b_prop(k,baryon).imag();
+             QDPIO::cout<<"j"<<"# "<<h_sft_set(k) <<"\n";
+         }
+
+       }
+    }
+    std::cout.rdbuf(coutbuf);
 }
-*/
+
+
 
 multi2d<DComplex> kokkos_sft(multi1d<bool> doSet,View_int_2d d_sft_sets, View_corr_type k_b_prop, auto d_phases){
 
@@ -213,11 +207,17 @@ multi2d<DComplex> kokkos_sft(multi1d<bool> doSet,View_int_2d d_sft_sets, View_co
         for(int j=0;j < d_sft_sets.extent(0);j++){
           global_hsum[i][j]=0;
           if(doSet[j]){
+
+              //if(i==0)
+              //QDPIO::cout <<"d_phases(0,d_sft_sets("<<j<<",0))"<<d_phases(i,d_sft_sets(j,0)).real()<<"\n";
+ 
               Kokkos::complex<double> tmpSum=0;
               Kokkos::parallel_reduce(  "Site loop",range_policy(0,d_sft_sets.extent(1)), KOKKOS_LAMBDA ( const int k, Kokkos::complex<double> &innerUpdate ) {
                 innerUpdate += d_phases(i,d_sft_sets(j,k))*k_b_prop(d_sft_sets(j,k));
               },tmpSum);
-              global_hsum[i][j]=tmpSum.real();
+              global_hsum[i][j].elem().elem().elem().real()=tmpSum.real();
+              global_hsum[i][j].elem().elem().elem().imag()=tmpSum.imag();
+              //cmplx(Double(rca.real()), Double(rca.imag()));
           }
         }
       }
@@ -225,9 +225,30 @@ multi2d<DComplex> kokkos_sft(multi1d<bool> doSet,View_int_2d d_sft_sets, View_co
   
   return global_hsum;
 }
+/*
+multi3d<DComplex> kokkos_sft(int nSite, int baryon,multi1d<bool> doSet,View_LatticeInteger d_sft_sets, View_corr_type k_b_prop, auto d_phases){
 
+      multi3d<DComplex> global_hsum;
+      global_hsum.resize(d_phases.extent(0),d_sft_sets.extent(0));
 
+      for(int i=0;i < d_phases.extent(0);i++){
+        for(int j=0;j < d_sft_sets.extent(0);j++){
+          global_hsum[baryon][i][j]=0;
+          if(doSet[j]){
+              Kokkos::complex<double> tmpSum=0;
+              Kokkos::parallel_reduce(  "Site loop",range_policy(0,d_sft_sets.extent(1)), KOKKOS_LAMBDA ( const int k, Kokkos::complex<double> &innerUpdate ) {
+                innerUpdate += d_phases(i,d_sft_sets(j,k))*k_b_prop(d_sft_sets(j,k));
+              },tmpSum);
+              global_hsum[baryon][i][j]=tmpSum.real();
+          }
+        }
+      }
+      //QDPInternal::globalSumArray(global_hsum);
 
+  return global_hsum;
+}
+
+*/
 
 KOKKOS_INLINE_FUNCTION void kokkos_sft_multi( View_int_2d d_sft_sets, View_corr_type k_b_prop, auto d_phases){
 
@@ -256,27 +277,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_sft_multi( View_int_2d d_sft_sets, View_corr_
 
 }
 
-
-/*
-void kokkos_sft(View_corr_array_type summedCorrs, const View_corr_type& corr,View_LatticeComplex1d& phases,
-                        View_int_2d d_sft_sets, View_int_1d& idx_map){
-  
-   int sets = d_sft_sets.extent(0);
-   int moms=4;  
-  Kokkos::parallel_for( "Set loop",range_policy(0,sets), KOKKOS_LAMBDA ( int nSite ) {
-    int numSites = d_sft_sets.extent(1);
-     Kokkos::parallel_for( "Mom loop",range_policy(0,moms), KOKKOS_LAMBDA ( int iSite ) {
-        Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int mSite ) {
-            int index = d_sft_sets(nSite,mSite);
-            summedCorrs(nSite,iSite)+=phases(0,mSite)*corr(mSite);
-          });
-     });
-       
-  });
-  Kokkos::fence();
-  
-}
-*/
 
 KOKKOS_INLINE_FUNCTION Kokkos::complex<double> timesIK(const Kokkos::complex<double>& s1)
 {
@@ -472,9 +472,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_SitePropDotSpinMatrix(int nSite, auto prop_ou
     }
 }
 
-/*
 KOKKOS_INLINE_FUNCTION void kokkos_SitePropDotSpinMatrix(auto prop_out, auto prop, auto sm){
- 
+
     for (int i=0; i<3;i++){
       for (int j=0; j<3;j++){
         auto p_out=Kokkos::subview(prop_out,Kokkos::ALL,Kokkos::ALL,i,j);
@@ -483,8 +482,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_SitePropDotSpinMatrix(auto prop_out, auto pro
       }
     }
 }
-*/
-
 
 KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(int nSite,auto prop_out, auto sm, auto prop){
 
@@ -497,7 +494,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(int nSite,auto prop_out
     }
 }
 
-/*
 KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(auto prop_out, auto sm, auto prop){
 
     for (int i=0; i<3;i++){
@@ -508,8 +504,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_SpinMatrixDotSiteProp(auto prop_out, auto sm,
       }
     }
 }
-
-*/
 
 KOKKOS_INLINE_FUNCTION void kokkos_propSpinTrace(auto cmat, auto prop){
 
@@ -1301,5 +1295,6 @@ KOKKOS_INLINE_FUNCTION void KokkosPropDotGamma(int gamma_value, View_prop_shifte
   }
 
 }
+
 
 #endif

@@ -392,7 +392,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
   void barhqlq(View_prop_type propagator_1,
            View_prop_type propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_int_2d d_sft_sets,
+           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
            int t0, int bc_spec, bool time_rev,
            XMLWriter& xml,
            const std::string& xml_group)
@@ -620,7 +620,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
   void barhqlq(View_prop_type quark_propagator_1,
            View_prop_type quark_propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_int_2d d_sft_sets,
+           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
            multi3d<DComplex>& barprop)
   {
     START_CODE();
@@ -639,8 +639,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     // Length of lattice in decay direction
 
     //int length = phases.numSubsets() ;
-    int length = d_sft_sets.extent(0);
-
+    //int length = d_sft_sets.extent(0);
+    int length = QDP::Layout::lattSize()[3];
     //View_LatticeComplex1d d_phases("d_phases",num_mom,numSites);
     //View_int_2d d_sft_sets("d_sft_sets", numSubsets,sitesInSets/realSets);
 
@@ -887,6 +887,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     total_time=0;
     // Loop over baryons
 
+
+
     View_corr_array_type::HostMirror h_k_b_prop = Kokkos::create_mirror_view( d_k_b_prop );
     Kokkos::deep_copy( h_k_b_prop, d_k_b_prop);
 
@@ -894,32 +896,69 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     auto *coutbuf = std::cout.rdbuf();
     std::ofstream out("bars.py",std::ios_base::app);
     std::cout.rdbuf(out.rdbuf());
+    
+    LatticeInteger t_coord = Layout::latticeCoordinate(3);
+    View_LatticeInteger d_t_coord("h_t_coord", numSites);
+    View_LatticeInteger::HostMirror h_t_coord =  Kokkos::create_mirror_view(d_t_coord); 
+
+    Kokkos::parallel_for( "Set t coordinate view",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int nSite ){
+             int qdp_index = sub.siteTable()[nSite];
+             h_t_coord(nSite) = Layout::latticeCoordinate(3).elem(qdp_index).elem().elem().elem().elem();
+          });
+
+     Kokkos::fence();
+     Kokkos::deep_copy( d_t_coord, h_t_coord );
+   
+    multi2d<DComplex> kokkos_hsum; 
+    kokkos_hsum.resize(num_mom,QDP::Layout::lattSize()[3]);
+
     for(int baryons = 0; baryons < num_baryons; ++baryons)  
     {
       //StopWatch tClock;
+      writeb_prop(h_k_b_prop,baryons,d_sft_sets);
       tClock.reset();
       tClock.start();      
       auto n_k_b_prop = Kokkos::subview(d_k_b_prop,Kokkos::ALL,baryons);
-      //QDPIO::cout<<"\n"<<baryons <<"  d_k_b_prop(0,"<<baryons<<")  =   "<<h_k_b_prop(0,baryons).real(); 
-    //Project onto zero and if desired non-zero momentum
-    multi2d<DComplex> kokkos_hsum;
-    kokkos_hsum = kokkos_sft(doSet, d_sft_sets, n_k_b_prop,d_phases);
-    
-    for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
-        for(int k = 0; k < 2; ++k){
-           int t=3*k;
-           //QDPIO::cout<<"\n"<<sink_mom_num<<"  Kokkos_hsum vs hsum  =   "<<kokkos_hsum[sink_mom_num][0].elem().elem().elem().real();
-           QDPIO::cout <<"hsum['Kokkos']["<<sink_mom_num<<"]["<<t<<"] = "<< kokkos_hsum[sink_mom_num][t].elem().elem().elem().real()<<"\n";
-           //QDPIO::cout<< "\n*************\n";
-        }
+          
+     //Project onto zero and if desired non-zero momentum
+     View_LatticeComplex sums_view("sums", QDP::Layout::lattSize()[3]);
+     View_LatticeComplex::HostMirror h_sums_view = Kokkos::create_mirror_view(sums_view);
+     
+     for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
+   
+       //auto n_d_phases = Kokkos::subview(d_phases,sink_mom_num,Kokkos::ALL);       
+       Kokkos_sft kokkos_Sft(n_k_b_prop,QDP::Layout::lattSize()[3],d_t_coord,d_phases,sink_mom_num);
+ 
+       Kokkos::parallel_reduce(range_policy(0,n_k_b_prop.extent(0)), kokkos_Sft, sums_view);
+       Kokkos::fence();
+       Kokkos::deep_copy( h_sums_view, sums_view );
+            
 	    for(int t = 0; t < length; ++t)
     	 {
 	       // NOTE: there is NO  1/2  multiplying hsum
-	       //barprop[baryons][sink_mom_num][t] = kokkos_hsum[sink_mom_num][t];
-           barprop[baryons][sink_mom_num][t] = Complex(kokkos_hsum[sink_mom_num][t]);
-
+           kokkos_hsum[sink_mom_num][t].elem().elem().elem().real()=h_sums_view(t).real();
+           kokkos_hsum[sink_mom_num][t].elem().elem().elem().imag()=h_sums_view(t).imag();
 	     }
+        
+         QDPInternal::globalSumArray(kokkos_hsum);
+
+        for(int t = 0; t < length; ++t)
+           barprop[baryons][sink_mom_num][t]=kokkos_hsum[sink_mom_num][t];
+    
+        if(QDP::Layout::nodeNumber() ==0 && baryons ==15){
+
+            for(int k = 0; k < 2; ++k){
+               int t=3*k;
+               //QDPIO::cout<<"\n"<<sink_mom_num<<"  Kokkos_hsum vs hsum  =   "<<kokkos_hsum[sink_mom_num][0].elem().elem().elem().real();
+               QDPIO::cout<<"hsum['Kokkos']["<<sink_mom_num<<"]["<<t<<"] = "<<kokkos_hsum[sink_mom_num][t].elem().elem().elem().real()<<"\n";
+               //QDPIO::cout<< "\n*************\n";
+            }
+
+        }
+
+        
       }
+     
       tClock.stop();
       time += tClock.getTimeInSeconds();
       //total_time+=tClock.getTimeInSeconds();
@@ -930,7 +969,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
     //QDPIO::cout << "Total for sft baryons  = " << time << " secs" << std::endl;
 
-    QDPIO::cout << "Total fory baryons old  = " << total_time << " secs" << std::endl;
+    QDPIO::cout << "Total for baryons old  = " << total_time << " secs" << std::endl;
 
 
     
