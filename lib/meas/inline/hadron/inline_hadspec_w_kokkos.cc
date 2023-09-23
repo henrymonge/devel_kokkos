@@ -661,8 +661,8 @@ namespace Chroma
 
 
       for (int mom_num=0; mom_num < num_mom; ++mom_num){
-         raw_qdp_jit_pointer1 = QDP_get_global_cache().get_dev_ptr( phases[mom_num].getId() );
-         QDPLattComplexViewType view_of_phases_mom_num(  (WordLatticeComplexType *) raw_qdp_jit_pointer1, numSites );
+         void* raw_qdp_jit_phases1 = QDP_get_global_cache().get_dev_ptr( phases[mom_num].getId() );
+         QDPLattComplexViewType view_of_phases_mom_num(  (WordLatticeComplexType *) raw_qdp_jit_phases1, numSites );
          
          Kokkos::parallel_for( "Phases init",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
            double re1 = view_of_phases_mom_num( qdp_indices(nSite), 0);
@@ -673,12 +673,6 @@ namespace Chroma
         });
       }
 
-    Kokkos::deep_copy( h_phases, d_phases );
-
-    View_LatticeInteger::HostMirror h_sft_sets = Kokkos::create_mirror_view( d_sft_sets);
-
-
-     QDPIO::cout << phases.getSet()[1].siteTable()[0]<<std::endl;
 
      multi1d<bool> doSet;
      doSet.resize(numSubsets);

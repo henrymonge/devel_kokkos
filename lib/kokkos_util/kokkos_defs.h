@@ -33,11 +33,14 @@ using range_policy = Kokkos::RangePolicy<ExecSpace,Kokkos::LaunchBounds<128,1>>;
 //using QDPViewType = Kokkos::View<T*[Ns][Ns][Nc][Nc][2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>
 using FType=typename WordType<LatticePropagator>::Type_t;
 using WordLatticeComplexType=typename WordType<LatticeComplex>::Type_t;
+using WordLatticeIntType=typename WordType<LatticeInteger>::Type_t;
+
 //using WordMulti1dIntType =WordType<multi1d<int>>::Type_t;
 
 
 typedef Kokkos::View<FType * [4][4][3][3][2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPViewType;
 typedef Kokkos::View<WordLatticeComplexType * [2],Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPLattComplexViewType;
+typedef Kokkos::View<WordLatticeIntType *,Kokkos_Layout,MemorySpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> QDPLattIntViewType;
 typedef Kokkos::View<int *,Kokkos::LayoutRight,Kokkos::HostSpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> View_int_1d_Unmag;
 
 

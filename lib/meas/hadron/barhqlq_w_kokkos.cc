@@ -868,21 +868,12 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     double time=0;
     total_time=0;
     // Loop over baryons
-
-
-
-    View_corr_array_type::HostMirror h_k_b_prop = Kokkos::create_mirror_view( d_k_b_prop );
-    Kokkos::deep_copy( h_k_b_prop, d_k_b_prop);
-
-
-    //auto *coutbuf = std::cout.rdbuf();
-    //std::ofstream out("bars.py",std::ios_base::app);
-    //std::cout.rdbuf(out.rdbuf());
-    
+   
     LatticeInteger t_coord = Layout::latticeCoordinate(3);
     View_LatticeInteger d_t_coord("h_t_coord", numSites);
     View_LatticeInteger::HostMirror h_t_coord =  Kokkos::create_mirror_view(d_t_coord); 
-
+  
+    /*  
     Kokkos::parallel_for( "Set t coordinate view",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int nSite ){
              int qdp_index = sub.siteTable()[nSite];
              h_t_coord(nSite) = Layout::latticeCoordinate(3).elem(qdp_index).elem().elem().elem().elem();
@@ -890,22 +881,53 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
      Kokkos::fence();
      Kokkos::deep_copy( d_t_coord, h_t_coord );
-   
+     */
+    //TEST CODE
+    
+      View_LatticeInteger qdp_indices("qdp_indices", numSites);
+      View_LatticeInteger::HostMirror h_qdp_indices = Kokkos::create_mirror_view( qdp_indices );
+
+      Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int n ) {
+          int qdp_index = sub.siteTable()[n];
+          h_qdp_indices(n)=qdp_index;
+      });
+      Kokkos::deep_copy(qdp_indices, h_qdp_indices);
+
+
+     void* raw_qdp_jit_t_coord = QDP_get_global_cache().get_dev_ptr( t_coord.getId() );
+     QDPLattIntViewType view_of_t_coord(  (WordLatticeIntType *) raw_qdp_jit_t_coord, numSites );
+
+     Kokkos::parallel_for( "t coords init",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
+       int tc = view_of_t_coord( qdp_indices(nSite));
+       d_t_coord(nSite) = tc;
+    });
+
+
+    Kokkos::fence();
+    //END TEST CODE
+
+
+
+
+
+    QDPIO::cout << "Finished copying coords " << std::endl;
     multi2d<DComplex> kokkos_hsum; 
     kokkos_hsum.resize(num_mom,QDP::Layout::lattSize()[3]);
+
+     View_LatticeComplex sums_view("sums", QDP::Layout::lattSize()[3]);
+     View_LatticeComplex::HostMirror h_sums_view = Kokkos::create_mirror_view(sums_view);
 
     for(int baryons = 0; baryons < num_baryons; ++baryons)  
     {
       //StopWatch tClock;
-      writeb_prop(h_k_b_prop,baryons,d_sft_sets);
+      //writeb_prop(h_k_b_prop,baryons,d_sft_sets);
       tClock.reset();
       tClock.start();      
       auto n_k_b_prop = Kokkos::subview(d_k_b_prop,Kokkos::ALL,baryons);
-          
+      //Kokkos_sft kokkos_Sft(n_k_b_prop,QDP::Layout::lattSize()[3],d_t_coord,d_phases,sink_mom_num);          
+
      //Project onto zero and if desired non-zero momentum
-     View_LatticeComplex sums_view("sums", QDP::Layout::lattSize()[3]);
-     View_LatticeComplex::HostMirror h_sums_view = Kokkos::create_mirror_view(sums_view);
-     
+    
      for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
    
        //auto n_d_phases = Kokkos::subview(d_phases,sink_mom_num,Kokkos::ALL);       
@@ -935,7 +957,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     
     } // end loop over baryons
     
-    //std::cout.rdbuf(coutbuf);
 
     //QDPIO::cout << "Total for sft baryons  = " << time << " secs" << std::endl;
 
