@@ -631,18 +631,12 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
      tClock.reset();
      tClock.start();
 
-
-    //QDPIO::cout << "Now running kokkos barhqlq code\n";
     int nodeNumber=Layout::nodeNumber();
     const QDP::Subset& sub = QDP::all;
     int numSites = sub.siteTable().size();
-    // Length of lattice in decay direction
 
-    //int length = phases.numSubsets() ;
-    //int length = d_sft_sets.extent(0);
+    // Length of lattice in decay direction
     int length = QDP::Layout::lattSize()[3];
-    //View_LatticeComplex1d d_phases("d_phases",num_mom,numSites);
-    //View_int_2d d_sft_sets("d_sft_sets", numSubsets,sitesInSets/realSets);
 
     if ( Ns != 4 || Nc != 3 )		/* Code is specific to Ns=4 and Nc=3. */
       return;
@@ -727,9 +721,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     QDPSpMatrixToKokkosSpMatrix(h_Cg5NRnegPar,Cg5NRnegPar);
     Kokkos::deep_copy( d_Cg5NRnegPar, h_Cg5NRnegPar);
 
-    //View_corr_type k_b_prop("k_b_prop",numSites);
-    //View_corr_type::HostMirror h_k_b_prop = Kokkos::create_mirror_view( k_b_prop );
-    //View_corr_array_type d_k_b_prop("k_b_prop",num_baryons,numSites);
     View_corr_array_type d_k_b_prop("d_k_b_prop",numSites,num_baryons);
 
    
@@ -738,14 +729,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
      tClock.reset();
      tClock.start();
 
-     //total_time =tClock.getTimeInSeconds();
-    //Printing out values to compare
-    //auto *coutbuf = std::cout.rdbuf();
-    //std::ofstream out("bars.py",std::ios_base::app);
-    //std::cout.rdbuf(out.rdbuf());
 
-      //auxiliary views
-      
+      //auxiliary views      
       View_prop_type tmp2("tmp2",numSites);
       View_prop_type tmp1("tmp1",numSites);
  
@@ -762,9 +747,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
       View_Latt_spin_matrix_type stmp1("stmp1",numSites);
       View_Latt_spin_matrix_type stmp2("stmp2",numSites);
       View_Latt_color_matrix_type ctmp("ctmp",numSites);
-      //View_LatticeComplex_2d d_hsum("d_hsum",numSites,num_mom,length);      
- 
-      //multi3d<DComplex> kokkos_3hsum;
 
       Kokkos::complex<double> tmpSum=0;
 
@@ -893,9 +875,9 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     Kokkos::deep_copy( h_k_b_prop, d_k_b_prop);
 
 
-    auto *coutbuf = std::cout.rdbuf();
-    std::ofstream out("bars.py",std::ios_base::app);
-    std::cout.rdbuf(out.rdbuf());
+    //auto *coutbuf = std::cout.rdbuf();
+    //std::ofstream out("bars.py",std::ios_base::app);
+    //std::cout.rdbuf(out.rdbuf());
     
     LatticeInteger t_coord = Layout::latticeCoordinate(3);
     View_LatticeInteger d_t_coord("h_t_coord", numSites);
@@ -944,19 +926,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
         for(int t = 0; t < length; ++t)
            barprop[baryons][sink_mom_num][t]=kokkos_hsum[sink_mom_num][t];
-    
-        if(QDP::Layout::nodeNumber() ==0 && baryons ==15){
-
-            for(int k = 0; k < 2; ++k){
-               int t=3*k;
-               //QDPIO::cout<<"\n"<<sink_mom_num<<"  Kokkos_hsum vs hsum  =   "<<kokkos_hsum[sink_mom_num][0].elem().elem().elem().real();
-               QDPIO::cout<<"hsum['Kokkos']["<<sink_mom_num<<"]["<<t<<"] = "<<kokkos_hsum[sink_mom_num][t].elem().elem().elem().real()<<"\n";
-               //QDPIO::cout<< "\n*************\n";
-            }
-
-        }
-
-        
+            
       }
      
       tClock.stop();
@@ -965,7 +935,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     
     } // end loop over baryons
     
-    std::cout.rdbuf(coutbuf);
+    //std::cout.rdbuf(coutbuf);
 
     //QDPIO::cout << "Total for sft baryons  = " << time << " secs" << std::endl;
 

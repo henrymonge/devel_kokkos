@@ -575,40 +575,6 @@ namespace Chroma
       int numSites = sub.siteTable().size();
 
 
-      //Old way to move to gpu
-        View_prop_type o_d_sink_prop1("o_d_sink_prop1", numSites);
-        View_prop_type o_d_sink_prop2("o_d_sink_prop2", numSites);
-
-        View_prop_type::HostMirror o_h_sink_prop1 = Kokkos::create_mirror_view( o_d_sink_prop1 );
-        View_prop_type::HostMirror o_h_sink_prop2 = Kokkos::create_mirror_view( o_d_sink_prop2 );
-
-
-      
-
-
-
-        Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int n ) {
-          int qdp_index = sub.siteTable()[n];
-
-          for ( int i = 0; i  < 4; ++i ) {
-            for ( int j = 0; j < 4; ++j ) {
-              for ( int c1 = 0; c1  < 3; ++c1) {
-                for  ( int c2 = 0; c2  < 3; ++c2 ) {
-                  o_h_sink_prop1(n,i,j,c1,c2)=QDPtoKokkosComplex(sink_prop_1.elem(qdp_index).elem(i,j).elem(c1,c2));
-                  o_h_sink_prop2(n,i,j,c1,c2)=QDPtoKokkosComplex(sink_prop_2.elem(qdp_index).elem(i,j).elem(c1,c2));
-                }
-              }
-            }
-          }
-
-       });
-
-
-      Kokkos::deep_copy( o_d_sink_prop1, o_h_sink_prop1);
-      Kokkos::deep_copy( o_d_sink_prop2, o_h_sink_prop2 );
-
-      Kokkos::fence();
-
       //########################
 
       View_LatticeInteger qdp_indices("qdp_indices", numSites);
@@ -633,8 +599,6 @@ namespace Chroma
 
       View_prop_type d_sink_prop1("d_sink_prop1", numSites);
       View_prop_type d_sink_prop2("d_sink_prop2", numSites);
-      View_prop_type::HostMirror h_sink_prop1 = Kokkos::create_mirror_view( d_sink_prop1 );
-      View_prop_type::HostMirror h_sink_prop2 = Kokkos::create_mirror_view( d_sink_prop2 );
 
       //Here we get the prop directly from the qdp-jit pointer
       Kokkos::parallel_for( "Device props init",range_policy(0,numSites), KOKKOS_LAMBDA ( int n ) {
@@ -654,21 +618,9 @@ namespace Chroma
             }
           }
 
-      });
-       
-
-      Kokkos::deep_copy( h_sink_prop1, d_sink_prop1);
-      Kokkos::deep_copy( h_sink_prop2, d_sink_prop2 );
+      });     
 
       int nodeNumber=Layout::nodeNumber();
-
-
-      double mytmp=(h_sink_prop2(0,1,2,2,1).real()-o_h_sink_prop2(0,1,2,2,1).real())/o_h_sink_prop2(0,1,2,2,1).real();
-      
-        QDPIO::cout<<"\nh_sink_prop2-o_h_sink_prop2="<<mytmp<<"\n";
-
-      
-
 
      tClock.stop();
      QDPIO::cout << "1 Total time up to  here = "
@@ -730,16 +682,16 @@ namespace Chroma
 
      multi1d<bool> doSet;
      doSet.resize(numSubsets);
-
+    /*
     Kokkos::parallel_for( "Sets init loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int nSite ){
              int qdp_index = sub.siteTable()[nSite];
              h_sft_sets(nSite) = Layout::latticeCoordinate(3).elem(qdp_index).elem().elem().elem().elem();
           });
 
 
-     Kokkos::fence();
 
      Kokkos::deep_copy( d_sft_sets, h_sft_sets );
+     */
 
      tClock.stop();
      QDPIO::cout << "Total time up to  here = "
