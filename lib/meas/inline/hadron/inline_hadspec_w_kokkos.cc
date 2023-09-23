@@ -673,9 +673,6 @@ namespace Chroma
         });
       }
 
-
-     multi1d<bool> doSet;
-     doSet.resize(numSubsets);
     /*
     Kokkos::parallel_for( "Sets init loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,numSites), KOKKOS_LAMBDA ( int nSite ){
              int qdp_index = sub.siteTable()[nSite];
@@ -724,8 +721,7 @@ namespace Chroma
 	//barhqlq(sink_prop_2, sink_prop_1, phases, 
 	//	t0, bc_spec, params.param.time_rev, 
 	//	xml_out, source_sink_type + "_Wilson_Baryons");
-          barhqlq(d_sink_prop2, d_sink_prop1, d_phases,doSet,d_sft_sets,
-        t0, bc_spec, params.param.time_rev,
+          barhqlq(d_sink_prop2, d_sink_prop1, d_phases,t0, bc_spec, params.param.time_rev,
         xml_out, source_sink_type + "_Wilson_Baryons");
     
       } // end if (BaryonP)

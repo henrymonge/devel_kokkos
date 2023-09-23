@@ -102,8 +102,7 @@ namespace Chroma
 
   void barhqlq(View_prop_type propagator_1,
            View_prop_type propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
-           int t0, int bc_spec, bool time_rev,
+           View_LatticeComplex1d d_phases,int t0, int bc_spec, bool time_rev,
            XMLWriter& xml,
            const std::string& xml_group);
 
@@ -181,8 +180,7 @@ namespace Chroma
 
   void barhqlq(View_prop_type propagator_1,
            View_prop_type propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
-           multi3d<DComplex>& barprop);
+           View_LatticeComplex1d d_phases,multi3d<DComplex>& barprop);
 
 }  // end namespace Chroma
 

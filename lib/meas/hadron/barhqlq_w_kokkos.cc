@@ -392,8 +392,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
   void barhqlq(View_prop_type propagator_1,
            View_prop_type propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
-           int t0, int bc_spec, bool time_rev,
+           View_LatticeComplex1d d_phases, int t0, int bc_spec, bool time_rev,
            XMLWriter& xml,
            const std::string& xml_group)
   {
@@ -420,7 +419,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
   swatch.reset();
   swatch.start();
     
-    barhqlq(propagator_1, propagator_2, d_phases, doSet, d_sft_sets, bardisp1);
+    barhqlq(propagator_1, propagator_2, d_phases,bardisp1);
 
 
   swatch.stop();
@@ -464,7 +463,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         kokkos_multiply_view_prop(-1, d_q2_tmp, nSite);
       });
     Kokkos::fence();
-      barhqlq(d_q1_tmp, d_q2_tmp, d_phases, doSet, d_sft_sets, bardisp2);
+      barhqlq(d_q1_tmp, d_q2_tmp, d_phases,  bardisp2);
       //barhqlq(d_q1_tmp, d_q2_tmp, phases, bardisp2);
     }    
   
@@ -620,8 +619,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
   void barhqlq(View_prop_type quark_propagator_1,
            View_prop_type quark_propagator_2,
-           View_LatticeComplex1d d_phases, multi1d<bool> doSet,View_LatticeInteger d_sft_sets,
-           multi3d<DComplex>& barprop)
+           View_LatticeComplex1d d_phases, multi3d<DComplex>& barprop)
   {
     START_CODE();
 
