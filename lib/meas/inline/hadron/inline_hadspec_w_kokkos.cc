@@ -570,7 +570,6 @@ namespace Chroma
 
       //Use kokkos routines on device 
       //################################################
-      QDPIO::cout << "Sending sink_prop_1/sink_prop_2 to device= " << std::endl;
       const QDP::Subset& sub = QDP::all;
       int numSites = sub.siteTable().size();
 
@@ -634,25 +633,50 @@ namespace Chroma
 
       //Set sft_set=phases.getSet();
             
-      int sitesInSets=0;
-      int realSets=0;
+      int sitesInSets=Layout::subgridLattSize()[0]*Layout::subgridLattSize()[1] *Layout::subgridLattSize()[2];
+      int realSets=Layout::subgridLattSize()[3];
       int setMaxSize=0;
-     //StopWatch tClock;
-     tClock.reset();
-     tClock.start();
+      //StopWatch tClock;
+      tClock.reset();
+      tClock.start();
 
-   
-      for (int k=0;k<phases.getSet().numSubsets();k++){
-            sitesInSets+=phases.getSet()[k].siteTable().size();
-            if(phases.getSet()[k].siteTable().size()!=0){
-                realSets+=1;
-            }
-            if(phases.getSet()[k].siteTable().size()>setMaxSize){
-                setMaxSize=phases.getSet()[k].siteTable().size();
-            }
-      }  
+      QDPIO::cout << " "<<  Layout::subgridLattSize()[1]<< " "<<  Layout::subgridLattSize()[2] << " ";
+      QDPIO::cout << Layout::subgridLattSize()[3] << "\n";
+      
+      //Do bins here. The bins will depend on CUDA/HIP 
+      //int shmemsize=62;
+      //int bins=ceil(realSets/shmemsize);
+      Kokkos::View<int **> d_t_sets("d_t_sets",Layout::subgridLattSize()[3],
+                                               Layout::subgridLattSize()[0]*Layout::subgridLattSize()[1]*Layout::subgridLattSize()[2]);
 
-     
+      Kokkos::View<int *> d_t_ind("d_t_ind",Layout::subgridLattSize()[3]);
+      Kokkos::View<int *>::HostMirror h_t_ind = Kokkos::create_mirror_view(d_t_ind);
+      Kokkos::View<int **>::HostMirror h_t_sets = Kokkos::create_mirror_view(d_t_sets);
+
+      int counter=0;
+      int setSizes=phases.getSet()[24].numSiteTable();
+      QDPInternal::globalSum(setSizes);    
+      for(int k=0;k<Layout::lattSize()[3];k++){
+         if(phases.getSet()[k].numSiteTable() !=0){
+             h_t_ind(counter) = k;
+             multi1d setTable= phases.getSet()[k].siteTable();
+             Kokkos::parallel_for( "Site loop",Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0,d_t_sets.extent(1)), KOKKOS_LAMBDA ( int n ) {
+               int qdp_index= setTable[n];
+               h_t_sets(counter,n)=h_kokkos_indices(qdp_index);
+          });
+            counter++;
+         }
+      }
+
+
+      Kokkos::fence();
+      Kokkos::deep_copy(d_t_ind,h_t_ind);
+      Kokkos::deep_copy(d_t_sets,h_t_sets);
+
+      //void *raw_qdp_jit_pointer1 = QDP_get_global_cache().get_dev_ptr( phases.getSet()[k].siteTable().getId() );
+      //QDPViewType view_of_sink_prop_1(  (FType *) raw_qdp_jit_pointer1, numSites );
+
+ 
       View_LatticeComplex1d d_phases("d_phases",num_mom,numSites);
       View_LatticeInteger d_sft_sets("d_sft_sets", numSites);
 
@@ -689,8 +713,6 @@ namespace Chroma
         << tClock.getTimeInSeconds()
         << " secs" << std::endl;
 
-     QDPIO::cout << "Done Sending sink_prop_1/sink_prop_2 to device= " << std::endl;
-
       // Do the mesons first
       if (params.param.MesonP) 
       {
@@ -715,6 +737,17 @@ namespace Chroma
      tClock.reset();
      tClock.start();      
 
+
+
+     tClock.stop();
+     snoop.stop();
+    
+     QDPIO::cout << "Total before bar conts = " << snoop.getTimeInSeconds() << " secs" << std::endl;
+     snoop.start();   
+     snoop.stop();
+     QDPIO::cout << "Total before bar conts = " << snoop.getTimeInSeconds() << " secs" << std::endl;
+     snoop.start();
+
       // Do the baryons
       if (params.param.BaryonP) 
       {
@@ -722,8 +755,8 @@ namespace Chroma
 	//	t0, bc_spec, params.param.time_rev, 
 	//	xml_out, source_sink_type + "_Wilson_Baryons");
           barhqlq(d_sink_prop2, d_sink_prop1, d_phases,t0, bc_spec, params.param.time_rev,
-        xml_out, source_sink_type + "_Wilson_Baryons");
-    
+        xml_out, source_sink_type + "_Wilson_Baryons",h_t_ind, d_t_sets);
+
       } // end if (BaryonP)
 
 

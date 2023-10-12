@@ -191,16 +191,24 @@ struct Kokkos_sft {
 
   View_LatticeComplex X_;
   View_LatticeComplex1d P_;
-  Kokkos::View<int *> T_;
+  //Kokkos::View<int *> T_;
+  View_LatticeInteger T_;
+
   int mom_num_;
   // As with the above examples, you may supply an
   // execution_space typedef. If not supplied, Kokkos
   // will use the default execution space for this functor.
-
+   /*
   // Be sure to set value_count in the constructor.
   Kokkos_sft(const View_LatticeComplex& X, int const size,const Kokkos::View<int *>& T,const View_LatticeComplex1d& P,int const mom_num )
       : value_count(size),  // # columns in X
         X_(X),T_(T),P_(P),mom_num_(mom_num) {}
+  */
+  // Be sure to set value_count in the constructor.
+  Kokkos_sft(const View_LatticeComplex& X, const size_type size,const View_LatticeInteger& T,const View_LatticeComplex1d& P,int const mom_num )
+      : value_count(size),  // # columns in X
+        X_(X),T_(T),P_(P),mom_num_(mom_num) {}
+
 
   // value_type here is already a "reference" type,
   // so we don't pass it in by reference here.
@@ -224,6 +232,7 @@ struct Kokkos_sft {
     for (size_type j = 0; j < value_count; ++j) {
       sum[j] = 0.0;
     }
+
   }
 };
 

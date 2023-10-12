@@ -104,7 +104,7 @@ namespace Chroma
            View_prop_type propagator_2,
            View_LatticeComplex1d d_phases,int t0, int bc_spec, bool time_rev,
            XMLWriter& xml,
-           const std::string& xml_group);
+           const std::string& xml_group, Kokkos::View<int *,Kokkos::LayoutRight,Kokkos::Serial> h_t_ind, Kokkos::View<int **> d_t_sets);
 
 
   //! Heavy-light baryon 2-pt functions
@@ -180,7 +180,7 @@ namespace Chroma
 
   void barhqlq(View_prop_type propagator_1,
            View_prop_type propagator_2,
-           View_LatticeComplex1d d_phases,multi3d<DComplex>& barprop);
+           View_LatticeComplex1d d_phases,multi3d<DComplex>& barprop, Kokkos::View<int *, Kokkos::LayoutRight,Kokkos::Serial> h_t_ind, Kokkos::View<int **> d_t_sets);
 
 }  // end namespace Chroma
 

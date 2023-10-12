@@ -31,7 +31,6 @@ namespace Chroma
         kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
         kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
-
         /*
         //trace(T * traceColor(quark_propagator_1 * di_quark))
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_1, sub_di_quark);
@@ -45,6 +44,7 @@ namespace Chroma
         kokkos_SpinMatrixDotSiteProp(sub_tmp1,T,sub_tmp2);
         k_b_prop(nSite) += kokkos_site_prop_trace(sub_tmp1);
         */
+        
         k_b_prop(nSite)=0.0;
         for(int s=0; s<4;s++){
            for(int c=0; c<3;c++){
@@ -61,7 +61,7 @@ namespace Chroma
                }
            }
         }
-
+        
 #endif
     }
 
@@ -76,7 +76,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_1, sp);
         kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
         kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
-
+       
+        /*
         //trace(T * traceColor(quark_propagator_2 * di_quark)))
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
         kokkos_SpinMatrixProduct(sub_stmp1,T,sub_stmp2);
@@ -88,7 +89,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         kokkos_PropColorMatrixProduct(sub_tmp2, q_prop_2, sub_ctmp);
         kokkos_SpinMatrixDotSiteProp(sub_tmp1,T,sub_tmp2);
         k_b_prop(nSite) += kokkos_site_prop_trace(sub_tmp1);
-       /*
+        */
         k_b_prop(nSite)=0.0;
         for(int s=0; s<4;s++){
            for(int c=0; c<3;c++){
@@ -105,7 +106,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
                }
            }
         }
-        */
+        
 
 #endif
     }
@@ -200,11 +201,11 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     {
 #if QDP_NC == 3
         //di_quark = quarkContract13(quark_propagator_1 * sp,sp * quark_propagator_2);
-        kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_1, sp);
-        kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
-        kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
+        //kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_1, sp);
+        //kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
+        //kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
-        /*
+            
         for(int c1=0; c1<3;c1++){
            for(int c2=0; c2<3;c2++){
                 for(int s1=0; s1<4;s1++){
@@ -213,16 +214,16 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
                                              q_prop_1(s1,1,c1,c2)*sp(1,s2)+                                         
                                              q_prop_1(s1,2,c1,c2)*sp(2,s2)+
                                              q_prop_1(s1,3,c1,c2)*sp(3,s2);
-                     sub_tmp1(s1,s2,c1,c2) = sp(0,s1)*q_prop_2(s2,0,c1,c2)+
-                                             sp(1,s1)*q_prop_2(s1,1,c1,c2)+
-                                             sp(2,s1)*q_prop_2(s1,2,c1,c2)+
-                                             sp(3,s1)*q_prop_2(s1,3,c1,c2);
+                     sub_tmp2(s1,s2,c1,c2) = sp(s1,0)*q_prop_2(0,s2,c1,c2)+
+                                             sp(s1,1)*q_prop_2(1,s2,c1,c2)+
+                                             sp(s1,2)*q_prop_2(2,s2,c1,c2)+
+                                             sp(s1,3)*q_prop_2(3,s2,c1,c2);
                    }
                 }
            }
         }
-         */
-        //kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
+        
+        kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
         /*
         //b_prop  = trace(T * traceColor(quark_propagator_2 * di_quark))
         kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
@@ -256,10 +257,9 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         
 
         //di_quark = quarkContract13(quark_propagator_2 * sp,sp * quark_propagator_1);
-        kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_2, sp);
-        kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_1);
+        //kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_2, sp);
+        //kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_1);
 
-        /*
         for(int c1=0; c1<3;c1++){
            for(int c2=0; c2<3;c2++){
                 for(int s1=0; s1<4;s1++){
@@ -268,24 +268,25 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
                                              q_prop_2(s1,1,c1,c2)*sp(1,s2)+
                                              q_prop_2(s1,2,c1,c2)*sp(2,s2)+
                                              q_prop_2(s1,3,c1,c2)*sp(3,s2);
-                     sub_tmp1(s1,s2,c1,c2) = sp(0,s1)*q_prop_1(s2,0,c1,c2)+
-                                             sp(1,s1)*q_prop_1(s1,1,c1,c2)+
-                                             sp(2,s1)*q_prop_1(s1,2,c1,c2)+
-                                             sp(3,s1)*q_prop_1(s1,3,c1,c2);
+                     sub_tmp2(s1,s2,c1,c2) = sp(s1,0)*q_prop_1(0,s2,c1,c2)+
+                                             sp(s1,1)*q_prop_1(1,s2,c1,c2)+
+                                             sp(s1,2)*q_prop_1(2,s2,c1,c2)+
+                                             sp(s1,3)*q_prop_1(3,s2,c1,c2);
                    }
                 }
            }
         }
+
+
         
-        */
         kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
-       /*
+       
        //b_prop += trace(T * traceColor(quark_propagator_2 * di_quark));
-        kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
-        kokkos_SpinMatrixProduct(sub_stmp1,T,sub_stmp2);
-        k_b_prop(nSite) += kokkos_spinMatrix_trace(sub_stmp1);
-       */
+        //kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_2, sub_di_quark);
+        //kokkos_SpinMatrixProduct(sub_stmp1,T,sub_stmp2);
+        //k_b_prop(nSite) += kokkos_spinMatrix_trace(sub_stmp1);
+       
         
         for(int s=0; s<4;s++){
            for(int c=0; c<3;c++){
@@ -302,13 +303,11 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         
 
 
-
         //di_quark = quarkContract13(quark_propagator_2 * sp,sp * quark_propagator_2);
-        kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_2, sp);
-        kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
+        //kokkos_SitePropDotSpinMatrix(sub_tmp1, q_prop_2, sp);
+        //kokkos_SpinMatrixDotSiteProp(sub_tmp2, sp, q_prop_2);
 
-        /*
-         for(int c1=0; c1<3;c1++){
+        for(int c1=0; c1<3;c1++){
            for(int c2=0; c2<3;c2++){
                 for(int s1=0; s1<4;s1++){
                    for(int s2=0; s2<4;s2++){
@@ -316,24 +315,24 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
                                              q_prop_2(s1,1,c1,c2)*sp(1,s2)+
                                              q_prop_2(s1,2,c1,c2)*sp(2,s2)+
                                              q_prop_2(s1,3,c1,c2)*sp(3,s2);
-                     sub_tmp1(s1,s2,c1,c2) = sp(0,s1)*q_prop_2(s2,0,c1,c2)+
-                                             sp(1,s1)*q_prop_2(s1,1,c1,c2)+
-                                             sp(2,s1)*q_prop_2(s1,2,c1,c2)+
-                                             sp(3,s1)*q_prop_2(s1,3,c1,c2);
+                     sub_tmp2(s1,s2,c1,c2) = sp(s1,0)*q_prop_2(0,s2,c1,c2)+
+                                             sp(s1,1)*q_prop_2(1,s2,c1,c2)+
+                                             sp(s1,2)*q_prop_2(2,s2,c1,c2)+
+                                             sp(s1,3)*q_prop_2(3,s2,c1,c2);
                    }
                 }
            }
         }
-        */
+              
         kokkos_quarkContract13(sub_di_quark, sub_tmp1, sub_tmp2);
 
-        /*
+        
         //b_prop += trace(T * traceColor(quark_propagator_1 * di_quark));
-        kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_1, sub_di_quark);
-        kokkos_SpinMatrixProduct(sub_stmp1,T,sub_stmp2);
-        k_b_prop(nSite) += kokkos_spinMatrix_trace(sub_stmp1);
+        //kokkos_traceColor_prop1_dot_prop2(sub_stmp2,q_prop_1, sub_di_quark);
+        //kokkos_SpinMatrixProduct(sub_stmp1,T,sub_stmp2);
+        //k_b_prop(nSite) += kokkos_spinMatrix_trace(sub_stmp1);
 
-        */ 
+         
         for(int s=0; s<4;s++){
            for(int c=0; c<3;c++){
                for(int c1=0; c1<3;c1++){
@@ -346,7 +345,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
                }
            }
         }
-
+        
         
         // b_prop *= 2;
         k_b_prop(nSite) *= 2;
@@ -394,7 +393,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
            View_prop_type propagator_2,
            View_LatticeComplex1d d_phases, int t0, int bc_spec, bool time_rev,
            XMLWriter& xml,
-           const std::string& xml_group)
+           const std::string& xml_group, Kokkos::View<int *,Kokkos::LayoutRight,Kokkos::Serial> h_t_ind, Kokkos::View<int **> d_t_sets)
   {
     START_CODE();
    
@@ -419,16 +418,14 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
   swatch.reset();
   swatch.start();
     
-    barhqlq(propagator_1, propagator_2, d_phases,bardisp1);
+    barhqlq(propagator_1, propagator_2, d_phases,bardisp1, h_t_ind, d_t_sets);
 
 
   swatch.stop();
   time=swatch.getTimeInSeconds();
 
-  QDPIO::cout << "Kokkos barhqlq contraction time  = " << time << " secs\n";
+  QDPIO::cout << "Kokkos barhqlq contraction time = " << time << " secs\n";
 
-
-  
   swatch.reset();
   swatch.start();
 
@@ -463,7 +460,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
         kokkos_multiply_view_prop(-1, d_q2_tmp, nSite);
       });
     Kokkos::fence();
-      barhqlq(d_q1_tmp, d_q2_tmp, d_phases,  bardisp2);
+      barhqlq(d_q1_tmp, d_q2_tmp, d_phases,  bardisp2, h_t_ind, d_t_sets);
       //barhqlq(d_q1_tmp, d_q2_tmp, phases, bardisp2);
     }    
   
@@ -475,8 +472,6 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
     int length  = bardisp1.size1();
 
 
-    QDPIO::cout << "length  = " << length  << std::endl;
- 
     // Loop over baryons
     XMLArrayWriter xml_bar(xml,num_baryons);
     push(xml_bar, xml_group);
@@ -544,7 +539,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
   swatch.stop();
   time=swatch.getTimeInSeconds();
   
-  //QDPIO::cout << "Time after barqh Contractions = " << time << " secs\n";
+  QDPIO::cout << "Time after barqh Contractions = " << time << " secs\n";
   
     END_CODE();
   }
@@ -619,7 +614,7 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
 
   void barhqlq(View_prop_type quark_propagator_1,
            View_prop_type quark_propagator_2,
-           View_LatticeComplex1d d_phases, multi3d<DComplex>& barprop)
+           View_LatticeComplex1d d_phases, multi3d<DComplex>& barprop, Kokkos::View<int *, Kokkos::LayoutRight,Kokkos::Serial> h_t_ind, Kokkos::View<int **> d_t_sets)
   {
     START_CODE();
 
@@ -732,13 +727,13 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
       View_prop_type tmp2("tmp2",numSites);
       View_prop_type tmp1("tmp1",numSites);
  
-      View_prop_type di_quark_d_Cg5("di_quark_d_Cg5",numSites);
-      View_prop_type di_quark_d_BarSMat("di_quark_d_BarSMat",numSites);
-      View_prop_type di_quark_d_Cg5g("di_quark_d_Cg5g",numSites);
-      View_prop_type di_quark_d_Cg4m("di_quark_d_Cg4m",numSites);
-      View_prop_type di_quark_d_Cg5NR("di_quark_d_Cg5NR",numSites);
-      View_prop_type di_quark_d_CgmNR("di_quark_d_CgmNR",numSites);
-      View_prop_type di_quark_d_Cg5NRnegPar("di_quark_d_Cg5NRnegPar",numSites);
+      //View_prop_type di_quark_d_Cg5("di_quark_d_Cg5",numSites);
+      //View_prop_type di_quark_d_BarSMat("di_quark_d_BarSMat",numSites);
+      //View_prop_type di_quark_d_Cg5g("di_quark_d_Cg5g",numSites);
+      //View_prop_type di_quark_d_Cg4m("di_quark_d_Cg4m",numSites);
+      //View_prop_type di_quark_d_Cg5NR("di_quark_d_Cg5NR",numSites);
+      //View_prop_type di_quark_d_CgmNR("di_quark_d_CgmNR",numSites);
+      //View_prop_type di_quark_d_Cg5NRnegPar("di_quark_d_Cg5NRnegPar",numSites);
       View_prop_type di_quark("di_quark",numSites);
 
 
@@ -747,6 +742,9 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
       View_Latt_color_matrix_type ctmp("ctmp",numSites);
 
       Kokkos::complex<double> tmpSum=0;
+
+     tClock.reset();
+     tClock.start();
 
       Kokkos::parallel_for( "Site loop",range_policy(0,numSites), KOKKOS_LAMBDA ( int nSite ) {
         auto q_prop_1 = Kokkos::subview(quark_propagator_1,nSite,Kokkos::ALL,Kokkos::ALL,Kokkos::ALL,Kokkos::ALL);
@@ -890,8 +888,8 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
           h_qdp_indices(n)=qdp_index;
       });
       Kokkos::deep_copy(qdp_indices, h_qdp_indices);
-
-
+      Kokkos::fence(); 
+     
      void* raw_qdp_jit_t_coord = QDP_get_global_cache().get_dev_ptr( t_coord.getId() );
      QDPLattIntViewType view_of_t_coord(  (WordLatticeIntType *) raw_qdp_jit_t_coord, numSites );
 
@@ -900,23 +898,23 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
        d_t_coord(nSite) = tc;
     });
 
-
+    
     Kokkos::fence();
     //END TEST CODE
 
 
 
-
-
-    QDPIO::cout << "Finished copying coords " << std::endl;
+    auto n_k_b_prop = Kokkos::subview(d_k_b_prop,Kokkos::ALL,0);
     multi2d<DComplex> kokkos_hsum; 
     kokkos_hsum.resize(num_mom,QDP::Layout::lattSize()[3]);
 
-     View_LatticeComplex sums_view("sums", QDP::Layout::lattSize()[3]);
-     View_LatticeComplex::HostMirror h_sums_view = Kokkos::create_mirror_view(sums_view);
+    View_LatticeComplex sums_view("sums", QDP::Layout::lattSize()[3]);
+    View_LatticeComplex::HostMirror h_sums_view = Kokkos::create_mirror_view(sums_view);
+
 
     for(int baryons = 0; baryons < num_baryons; ++baryons)  
     {
+      kokkos_hsum=0;
       //StopWatch tClock;
       //writeb_prop(h_k_b_prop,baryons,d_sft_sets);
       tClock.reset();
@@ -925,28 +923,35 @@ KOKKOS_INLINE_FUNCTION void kokkos_sigma2pt(int nSite, auto k_b_prop, auto q_pro
       //Kokkos_sft kokkos_Sft(n_k_b_prop,QDP::Layout::lattSize()[3],d_t_coord,d_phases,sink_mom_num);          
 
      //Project onto zero and if desired non-zero momentum
-    
      for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
    
        //auto n_d_phases = Kokkos::subview(d_phases,sink_mom_num,Kokkos::ALL);       
-       Kokkos_sft kokkos_Sft(n_k_b_prop,QDP::Layout::lattSize()[3],d_t_coord,d_phases,sink_mom_num);
- 
-       Kokkos::parallel_reduce(range_policy(0,n_k_b_prop.extent(0)), kokkos_Sft, sums_view);
-       Kokkos::fence();
-       Kokkos::deep_copy( h_sums_view, sums_view );
-            
-	    for(int t = 0; t < length; ++t)
-    	 {
-	       // NOTE: there is NO  1/2  multiplying hsum
-           kokkos_hsum[sink_mom_num][t].elem().elem().elem().real()=h_sums_view(t).real();
-           kokkos_hsum[sink_mom_num][t].elem().elem().elem().imag()=h_sums_view(t).imag();
-	     }
-        
-         QDPInternal::globalSumArray(kokkos_hsum);
+       //Kokkos_sft kokkos_Sft(n_k_b_prop,QDP::Layout::lattSize()[3],d_t_coord,d_phases,sink_mom_num);
+       //Kokkos::parallel_reduce(range_policy(0,n_k_b_prop.extent(0)), kokkos_Sft, sums_view);
 
-        for(int t = 0; t < length; ++t)
-           barprop[baryons][sink_mom_num][t]=kokkos_hsum[sink_mom_num][t];
-            
+       for(int t_i=0; t_i<d_t_sets.extent(0);t_i++){
+          auto t_set= Kokkos::subview(d_t_sets,t_i,Kokkos::ALL);
+          Kokkos::complex<double> temp_sum=0;
+          parallel_reduce ("Reduction", d_t_sets.extent(1), KOKKOS_LAMBDA (const int i, Kokkos::complex<double>& update) {
+            int n=t_set(i);
+            update += n_k_b_prop(n)*d_phases(sink_mom_num,n); 
+          }, temp_sum);
+          Kokkos::fence();
+
+          // NOTE: there is NO  1/2  multiplying hsum
+           kokkos_hsum[sink_mom_num][h_t_ind(t_i)].elem().elem().elem().real()=temp_sum.real();
+           kokkos_hsum[sink_mom_num][h_t_ind(t_i)].elem().elem().elem().imag()=temp_sum.imag();
+      }
+       
+       //Kokkos::fence();
+       //Kokkos::deep_copy( h_sums_view, sums_view );
+              
+      }
+
+      QDPInternal::globalSumArray(kokkos_hsum);
+      for(int sink_mom_num=0; sink_mom_num < num_mom; ++sink_mom_num){
+         for(int t = 0; t < length; ++t)
+            barprop[baryons][sink_mom_num][t]=kokkos_hsum[sink_mom_num][t];
       }
      
       tClock.stop();
