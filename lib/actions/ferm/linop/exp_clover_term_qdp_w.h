@@ -20,6 +20,7 @@ namespace Chroma
   namespace
   {
 
+#if 0
     template <typename T>
     struct ExpClovTriang {
 
@@ -171,6 +172,8 @@ namespace Chroma
       ExpClovTriang<T>& E;
     };
 
+#endif
+
     constexpr int N_exp_default = 17;
 
     template <typename REALT, int block>
@@ -271,6 +274,7 @@ namespace Chroma
       }
     }
 #endif
+
 
     template <typename REALT, int i = 0>
     inline void siteApplicationExp(RComplex<REALT>* __restrict__ cchi,
