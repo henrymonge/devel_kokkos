@@ -4,9 +4,9 @@
 [submodule "other_libs/sse_wilson_dslash"]
 	path = other_libs/sse_wilson_dslash
 	url = ../sse_wilson_dslash.git
-[submodule "other_libs/qdp-lapack"]
-	path = other_libs/qdp-lapack
-	url = ../qdp-lapack.git
 [submodule "other_libs/wilsonmg"]
 	path = other_libs/wilsonmg
 	url = ../wilsonmg.git
+[submodule "other_libs/qdp-lapack"]
+	path = other_libs/qdp-lapack
+	url = git@github.com:JeffersonLab/qdp-lapack.git
