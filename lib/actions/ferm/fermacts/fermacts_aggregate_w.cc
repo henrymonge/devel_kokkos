@@ -15,6 +15,7 @@
 #include "actions/ferm/fermacts/unprec_w12_fermact_w.h"
 
 #include "actions/ferm/fermacts/eoprec_clover_fermact_w.h"
+#include "actions/ferm/fermacts/eoprec_exp_clover_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_clover_extfield_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_wilson_fermact_w.h"
@@ -101,6 +102,7 @@ namespace Chroma
 	success &= UnprecParWilsonFermActEnv::registerAll();
 
 	success &= EvenOddPrecCloverFermActEnv::registerAll();
+    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
 	success &= SymEvenOddPrecCloverFermActEnv::registerAll();
 	success &= UnprecCloverFermActEnv::registerAll();
     success &= UnprecExpCloverFermActEnv::registerAll();

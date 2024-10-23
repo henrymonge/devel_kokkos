@@ -845,7 +845,9 @@ namespace Chroma
 
 	  // Get  weight*Tr_spin gamma_mu gamma_nu A^{-1} piece
 	  triacntr(sigma_XY_dag, mu_nu_index, cb);
-	  sigma_XY_dag[rb[cb]] *= factor;
+	  //sigma_XY_dag[rb[cb]] *= factor;
+
+      sigma_XY_dag[rb[cb]] *= factor*0;
 
 	  // These will be overwritten so no need to initialize to zero
 	  U ds_tmp_mu;
