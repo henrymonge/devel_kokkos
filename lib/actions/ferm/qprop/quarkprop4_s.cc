@@ -170,6 +170,25 @@ namespace Chroma
   }
 
 
+  template<>
+  void 
+  StaggeredTypeFermAct<LatticeStaggeredFermion, 
+		       multi1d<LatticeColorMatrix>,
+		       multi1d<LatticeColorMatrix> >::quarkProp_4q(
+    LatticeStaggeredPropagator& q_sol, 
+    XMLWriter& xml_out,
+    const LatticeStaggeredPropagator& q_src,
+    Handle< FermState<LatticeStaggeredFermion,
+    multi1d<LatticeColorMatrix>,
+    multi1d<LatticeColorMatrix> > > state,
+    const GroupXML_t& invParam,
+    QuarkSpinType quarkSpinType,
+    int& ncg_had) const
+  {
+    quarkProp4(q_sol, xml_out, q_src, *this, state, invParam, quarkSpinType, ncg_had);
+  }
+
+
 
 
 

@@ -79,6 +79,15 @@ namespace Chroma
 			   const GroupXML_t& invParam,
 			   QuarkSpinType quarkSpinType,
 			   int& ncg_had) const;
+
+    virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
+               XMLWriter& xml_out,
+               const typename PropTypeTraits<T>::Type_t& q_src,
+               Handle< FermState<T,P,Q> > state,
+               const GroupXML_t& invParam,
+               QuarkSpinType quarkSpinType,
+               int& ncg_had) const;
+
   };
 
 
@@ -178,6 +187,15 @@ namespace Chroma
 			   const GroupXML_t& invParam,
 			   QuarkSpinType quarkSpinType,
 			   int& ncg_had) const;
+    
+    virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
+               XMLWriter& xml_out,
+               const typename PropTypeTraits<T>::Type_t& q_src,
+               Handle< FermState<T,P,Q> > state,
+               const GroupXML_t& invParam,
+               QuarkSpinType quarkSpinType,
+               int& ncg_had) const;
+
   };
 
 

@@ -20,6 +20,7 @@
 #include "inline_make_source_w.h"
 #include "inline_make_source_ferm_w.h"
 #include "inline_propagator_w.h"
+#include "inline_4q_propagators_block_w.h"
 #include "inline_propagator_ferm_w.h"
 #include "inline_seqsource_w.h"
 #include "inline_hadspec_w.h"

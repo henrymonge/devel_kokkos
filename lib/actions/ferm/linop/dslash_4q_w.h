@@ -13,129 +13,18 @@
 //#include "lwldslash_w.h"
 #include "lwldslash_4q_w.h"
 
-// The QDP dslash class: QDPWilsonDslashOpt 
-// This is 'optimised' with temporaries and fused ops.
-#include "lwldslash_qdpopt_w.h"
 
-
-// The following is an ifdef lis that switches in optimised
-// Dslash-es. Currently only optimised dslash is the SSE One;
-#ifdef BUILD_CPP_WILSON_DSLASH
-
-#warning "Using New Dslashen"
-
-#include "lwldslash_w_cppf.h"
-#include "lwldslash_w_cppd.h"
-namespace Chroma {
-
-typedef CPPWilsonDslashF WilsonDslashF;
-typedef CPPWilsonDslashD WilsonDslashD;
-
-#if BASE_PRECISION == 32
-typedef CPPWilsonDslashF WilsonDslash;
-#else 
-typedef CPPWilsonDslashD WilsonDslash;
-#endif
-
-} // End Namespace Chroma
-
-
-#elif defined BUILD_LLVM_WILSON_DSLASH
-
-#warning "Using LLVM Dslash"
-
-#include "lwldslash_llvm_w.h"
-#include "lwldslash_w.h"
-
-namespace Chroma {
-typedef LLVMWilsonDslashD WilsonDslashD;
-typedef QDPWilsonDslashF WilsonDslashF;
-
-#if BASE_PRECISION == 32
-typedef QDPWilsonDslashF WilsonDslash;
-#else 
-typedef LLVMWilsonDslashD WilsonDslash;
-#endif
-}
-
-#elif defined(CHROMA_QPHIX_DSLASH_ENABLED)
-#include "qphix_singleton.h"
-#ifdef CHROMA_BUILDING_QPHIX_DSLASH
-#warning YAY!!!
-#include "lwldslash_w_qphix.h"
-namespace Chroma {
-	using WilsonDslash = QPhiXWilsonDslashFloating;
-	using WilsonDslashF = QPhiXWilsonDslashF;
-	using WilsonDslashD = QPhiXWilsonDslashD;
-}
-#else
-#warning BOOOO!!!!!// We aren't really building the QPhiX dslash... fallback
-namespace Chroma {
-
-  using WilsonDslash =  QDPWilsonDslash;
-  using WilsonDslashF =  QDPWilsonDslashF;
-  using WilsonDslashD = QDPWilsonDslashD;
-
-}  // end namespace Chroma
-#endif // BUILDING_CHROMA_QPHIX_DSLASH
-
-#elif defined BUILD_SSE_WILSON_DSLASH
-// The lwldslash_w_sse.h defines the SSE Dslash class
-// The following typedef switches it in.
-
-# include "lwldslash_w_sse.h"
-namespace Chroma {
-  typedef SSEWilsonDslash WilsonDslash;
-#if BASE_PRECISION == 32
-  typedef SSEWilsonDslash WilsonDslashF;
-
-  // original code:
-  // typedef QDPWilsonDslashOptD WilsonDslashD
-  // disabled for now until spin optimizations restored in QDP++
-  typedef QDPWilsonDslashD WilsonDslashD;
-#else
-  typedef SSEWilsonDslash WilsonDslashD;
-  typedef QDPWilsonDslashF WilsonDslashF;
-#endif
-
-}  // end namespace Chroma
-
-// Many #elif clauses could come in here for other opotimised Dslash-es
-#elif defined BUILD_PAB_WILSON_DSLASH
-# include "lwldslash_w_pab.h"
-namespace Chroma {
-
-  // Assume a DP build
-  typedef PABWilsonDslash WilsonDslash;
-
-  // I should set up both a single and a double prec PAB dslash?
-  typedef QDPWilsonDslashF WilsonDslashF;
-
-#ifndef CHROMA_USE_SLOPPY_BAGEL_DSLASH
-  // IF we are NOT Sloppy the PABWilsonDslash is the DP guy
-  typedef PABWilsonDslash WilsonDslashD;
-#else
-  // If the Dsalsh is SLoppy it is a single prec dslash but
-  // with a double prec exterior... so we fall back to QDP
-  // Dslash for the true double
-  typedef QDPWilsonDslashD WilsonDslashD;
-#endif
-
-
-}  // end namespace Chroma
-
-#else
 
 // Bottom line, if no optimised Dslash-s exist then the naive QDP Dslash
 // becomes the WilsonDslash
 namespace Chroma {
 
-  typedef QDPWilsonDslash WilsonDslash;
-  typedef QDPWilsonDslashF WilsonDslashF;
-  typedef QDPWilsonDslashD WilsonDslashD;
+  typedef QDPWilson4QDslash WilsonDslash;
+  typedef QDPWilson4QDslashF WilsonDslashF;
+  typedef QDPWilson4QDslashD WilsonDslashD;
 
 }  // end namespace Chroma
-#endif
+
 
 
 // 3D Dslashes

@@ -552,6 +552,7 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/fermacts/seoprec_clover_fermact_w.h
 	actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.h
 	actions/ferm/fermacts/unprec_clover_fermact_w.h
+    actions/ferm/fermacts/unprec_clover_4q_fermact_w.h
 	actions/ferm/fermacts/nef_fermact_params_w.h
 	actions/ferm/fermacts/eoprec_slic_fermact_w.h
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.h
@@ -634,6 +635,7 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/linop/unprec_ht_contfrac5d_linop_array_w.h
 	actions/ferm/linop/eoprec_ht_contfrac5d_linop_array_w.h
 	actions/ferm/linop/dslash_w.h
+    actions/ferm/linop/dslash_4q_w.h
 	actions/ferm/linop/dwffld_w.h
 	actions/ferm/linop/dslash_array_w.h
 	actions/ferm/linop/linop_w.h
@@ -646,6 +648,7 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/linop/lDeltaLs_w.h
 	actions/ferm/linop/lwldslash_base_w.h
 	actions/ferm/linop/lwldslash_w.h
+    actions/ferm/linop/lwldslash_4q_w.h
 	actions/ferm/linop/lwldslash_qdpopt_w.h
 	actions/ferm/linop/lwldslash_base_array_w.h
 	actions/ferm/linop/lwldslash_array_w.h
@@ -653,14 +656,17 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/linop/lwldslash_base_3d_w.h
 	actions/ferm/linop/lwldslash_3d_qdp_w.h
 	actions/ferm/linop/clover_term_w.h
+    actions/ferm/linop/clover_4q_term_w.h
 	actions/ferm/linop/clover_term_base_w.h
 	actions/ferm/linop/clover_term_qdp_w.h
+    actions/ferm/linop/clover_term_qdp_4q_w.h
 	actions/ferm/linop/eoprec_clover_linop_w.h
 	actions/ferm/linop/seoprec_clover_linop_w.h
 	actions/ferm/linop/shifted_linop_w.h
 	actions/ferm/linop/eoprec_clover_dumb_linop_w.h
 	actions/ferm/linop/eoprec_clover_orbifold_linop_w.h
 	actions/ferm/linop/unprec_clover_linop_w.h
+    actions/ferm/linop/unprec_clover_4q_linop_w.h
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.h
 	actions/ferm/linop/eoprec_dwflike_linop_base_array_w.h
 	actions/ferm/linop/eoprec_dwf_linop_array_w.h
@@ -704,6 +710,7 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/linop/eo3dprec_s_cprec_t_clover_linop_w.h
 	actions/ferm/qprop/qprop_w.h
 	actions/ferm/qprop/quarkprop4_w.h
+    actions/ferm/qprop/quarkprop4_4q_w.h
 	actions/ferm/qprop/dwf_qpropt_w.h
 	actions/ferm/qprop/dwf_quarkprop4_w.h
 	actions/ferm/qprop/nef_quarkprop4_w.h
@@ -964,6 +971,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/inline/hadron/inline_make_source_w.h
 	meas/inline/hadron/inline_make_source_ferm_w.h
 	meas/inline/hadron/inline_propagator_w.h
+    meas/inline/hadron/inline_4q_propagators_block_w.h
 	meas/inline/hadron/inline_propagator_ferm_w.h
 	meas/inline/hadron/inline_multi_propagator_w.h
 	meas/inline/hadron/inline_seqsource_w.h
@@ -1468,7 +1476,8 @@ target_sources(chromalib PRIVATE
 	actions/ferm/fermacts/eoprec_clover_fermact_w.cc 
 	actions/ferm/fermacts/seoprec_clover_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.cc 
-	actions/ferm/fermacts/unprec_clover_fermact_w.cc 
+	actions/ferm/fermacts/unprec_clover_fermact_w.cc
+    actions/ferm/fermacts/unprec_clover_4q_fermact_w.cc 
 	actions/ferm/fermacts/nef_fermact_params_w.cc 
 	actions/ferm/fermacts/eoprec_slic_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.cc 
@@ -1561,11 +1570,13 @@ target_sources(chromalib PRIVATE
 	actions/ferm/linop/unprec_wilson_linop_w.cc 
 	actions/ferm/linop/clover_term_base_w.cc 
 	actions/ferm/linop/clover_term_qdp_w.cc 
+    actions/ferm/linop/clover_term_qdp_4q_w.cc
 	actions/ferm/linop/eoprec_clover_linop_w.cc 
 	actions/ferm/linop/seoprec_clover_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_dumb_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_orbifold_linop_w.cc 
-	actions/ferm/linop/unprec_clover_linop_w.cc 
+	actions/ferm/linop/unprec_clover_linop_w.cc
+    actions/ferm/linop/unprec_clover_4q_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.cc 
 	actions/ferm/linop/eoprec_slic_linop_w.cc 
 	actions/ferm/linop/eoprec_slrc_linop_w.cc 
@@ -1580,7 +1591,8 @@ target_sources(chromalib PRIVATE
 	actions/ferm/qprop/dwf_quarkprop4_w.cc 
 	actions/ferm/qprop/nef_quarkprop4_w.cc 
 	actions/ferm/qprop/quarkprop4_multi_w.cc 
-	actions/ferm/qprop/quarkprop4_w.cc 
+	actions/ferm/qprop/quarkprop4_w.cc
+    actions/ferm/qprop/quarkprop4_4q_w.cc  
 	io/readszinferm_w.cc io/readszinqprop_w.cc 
 	io/writeszinqprop_w.cc 
 	meas/eig/ischiral_w.cc 
@@ -1733,7 +1745,8 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_apply_fermstate_w.cc 
 	meas/inline/hadron/inline_make_source_w.cc 
 	meas/inline/hadron/inline_make_source_ferm_w.cc 
-	meas/inline/hadron/inline_propagator_w.cc 
+	meas/inline/hadron/inline_propagator_w.cc
+    meas/inline/hadron/inline_4q_propagators_block_w.cc 
 	meas/inline/hadron/inline_propagator_ferm_w.cc 
 	meas/inline/hadron/inline_multi_propagator_w.cc 
 	meas/inline/hadron/inline_seqsource_w.cc 

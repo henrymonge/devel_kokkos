@@ -44,22 +44,22 @@ namespace Chroma
    */
 
   template<typename T, typename P, typename Q> 
-  class QDPWilsonDslashT : public WilsonDslashBase<T, P, Q>
+  class QDPWilson4QDslashT : public WilsonDslashBase<T, P, Q>
   {
   public:
 
     //! Empty constructor. Must use create later
-    QDPWilsonDslashT();
+    QDPWilson4QDslashT();
 
     //! Full constructor
-    QDPWilsonDslashT(Handle< FermState<T,P,Q> > state);
+    QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state);
 
     //! Full constructor with anisotropy
-    QDPWilsonDslashT(Handle< FermState<T,P,Q> > state,
+    QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state,
 		    const AnisoParam_t& aniso_);
 
     //! Full constructor with general coefficients
-    QDPWilsonDslashT(Handle< FermState<T,P,Q> > state,
+    QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state,
 		    const multi1d<Real>& coeffs_);
 
     //! Creation routine
@@ -74,7 +74,7 @@ namespace Chroma
 		const multi1d<Real>& coeffs_);
 
     //! No real need for cleanup here
-    ~QDPWilsonDslashT() {}
+    ~QDPWilson4QDslashT() {}
 
     /**
      * Apply a dslash
@@ -87,6 +87,8 @@ namespace Chroma
      * \return The output of applying dslash on psi
      */
     void apply (T& chi, const T& psi, enum PlusMinus isign, int cb) const;
+
+    void apply_D (T& chi, const T& psi, enum PlusMinus isign, int cb) const;
 
     //! Return the fermion BC object for this linear operator
     const FermBC<T,P,Q>& getFermBC() const {return *fbc;}
@@ -131,18 +133,18 @@ namespace Chroma
 
   //! Empty constructor
   template<typename T, typename P, typename Q>
-  QDPWilsonDslashT<T,P,Q>::QDPWilsonDslashT() {}
+  QDPWilson4QDslashT<T,P,Q>::QDPWilson4QDslashT() {}
   
   //! Full constructor
   template<typename T, typename P, typename Q>
-  QDPWilsonDslashT<T,P,Q>::QDPWilsonDslashT(Handle< FermState<T,P,Q> > state)
+  QDPWilson4QDslashT<T,P,Q>::QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state)
   {
     create(state);
   }
   
   //! Full constructor with anisotropy
   template<typename T, typename P, typename Q>
-  QDPWilsonDslashT<T,P,Q>::QDPWilsonDslashT(Handle< FermState<T,P,Q> > state,
+  QDPWilson4QDslashT<T,P,Q>::QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state,
 				   const AnisoParam_t& aniso_) 
   {
     create(state, aniso_);
@@ -150,7 +152,7 @@ namespace Chroma
 
   //! Full constructor with general coefficients
   template<typename T, typename P, typename Q>
-  QDPWilsonDslashT<T,P,Q>::QDPWilsonDslashT(Handle< FermState<T,P,Q> > state,
+  QDPWilson4QDslashT<T,P,Q>::QDPWilson4QDslashT(Handle< FermState<T,P,Q> > state,
 				   const multi1d<Real>& coeffs_)
   {
     create(state, coeffs_);
@@ -158,7 +160,7 @@ namespace Chroma
 
   //! Creation routine
   template<typename T, typename P, typename Q>
-  void QDPWilsonDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state)
+  void QDPWilson4QDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state)
   {
     multi1d<Real> cf(Nd);
     cf = 1.0;
@@ -167,7 +169,7 @@ namespace Chroma
 
   //! Creation routine with anisotropy
   template<typename T, typename P, typename Q>
-  void QDPWilsonDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state,
+  void QDPWilson4QDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state,
 			       const AnisoParam_t& anisoParam) 
   {
     START_CODE();
@@ -179,7 +181,7 @@ namespace Chroma
 
   //! Full constructor with general coefficients
   template<typename T, typename P, typename Q>
-  void QDPWilsonDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state,
+  void QDPWilson4QDslashT<T,P,Q>::create(Handle< FermState<T,P,Q> > state,
 			       const multi1d<Real>& coeffs_)
   {
     //QDPIO::cout << "Setting up QDP Wilson Dslash\n";
@@ -193,7 +195,7 @@ namespace Chroma
     // Sanity check
     if (fbc.operator->() == 0)
     {
-      QDPIO::cerr << "QDPWilsonDslash: error: fbc is null" << std::endl;
+      QDPIO::cerr << "QDPWilson4QDslash: error: fbc is null" << std::endl;
       QDP_abort(1);
     }
 
@@ -225,7 +227,37 @@ namespace Chroma
    */
   template<typename T, typename P, typename Q>
   void 
-  QDPWilsonDslashT<T,P,Q>::apply (T& chi, const T& psi, 
+  QDPWilson4QDslashT<T,P,Q>::apply (T& chi, const T& psi, 
+			  enum PlusMinus isign, int cb) const
+  {
+    START_CODE();
+
+    apply_D (chi,  psi, isign, cb);  //apply on first prop 
+
+
+    //QDPIO::cout << "Applying Dslash" << std::endl;
+    //chi=outerProduct(chi1,chi2);
+/*
+    T chi1= getChi(chi,1);
+    T chi2= getChi(ch2,2);
+    T psi1= getChi(psi,1);
+    T psi2= getChi(ps2,2);
+    apply_D (chi1,  psi1, isign, cb);  //apply on first prop 
+    //apply_D (chi2,  psi2, isign, cb);  //apply on second prop
+
+   chip[s,s,c,c]
+   chip[s,s0,c,c0]
+
+   chip[s,s,s,s,c,c,c,c]
+   chip[s,s0,s,s0,c,c0,c,c0]
+*/
+ 
+    END_CODE();
+  }
+
+  template<typename T, typename P, typename Q>
+  void 
+  QDPWilson4QDslashT<T,P,Q>::apply_D(T& chi, const T& psi, 
 			  enum PlusMinus isign, int cb) const
   {
     START_CODE();
@@ -294,7 +326,7 @@ namespace Chroma
       break;
     }
 
-    QDPWilsonDslashT<T,P,Q>::getFermBC().modifyF(chi, QDP::rb[cb]);
+    QDPWilson4QDslashT<T,P,Q>::getFermBC().modifyF(chi, QDP::rb[cb]);
 #else
     QDPIO::cerr<<"lwldslash_w: not implemented for NC!=3\n";
     QDP_abort(13) ;
@@ -302,18 +334,20 @@ namespace Chroma
     END_CODE();
   }
 
-  typedef QDPWilsonDslashT<LatticeFermion,
+
+
+  typedef QDPWilson4QDslashT<LatticeFermion,
 			   multi1d<LatticeColorMatrix>,
-			   multi1d<LatticeColorMatrix> > QDPWilsonDslash;
+			   multi1d<LatticeColorMatrix> > QDPWilson4QDslash;
 
 
-  typedef QDPWilsonDslashT<LatticeFermionF,
+  typedef QDPWilson4QDslashT<LatticeFermionF,
 			   multi1d<LatticeColorMatrixF>,
-			   multi1d<LatticeColorMatrixF> > QDPWilsonDslashF;
+			   multi1d<LatticeColorMatrixF> > QDPWilson4QDslashF;
 
-  typedef QDPWilsonDslashT<LatticeFermionD,
+  typedef QDPWilson4QDslashT<LatticeFermionD,
 			   multi1d<LatticeColorMatrixD>,
-			   multi1d<LatticeColorMatrixD> > QDPWilsonDslashD;
+			   multi1d<LatticeColorMatrixD> > QDPWilson4QDslashD;
 
 } // End Namespace Chroma
 

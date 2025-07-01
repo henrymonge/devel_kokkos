@@ -153,6 +153,55 @@ namespace Chroma
 	quarkProp(q_sol, xml_out, q_src, state, invParam, quarkSpinType, ncg_had);
       }
 
+    //! Given a complete propagator as a source, this does all the inversions needed
+    /*!
+     * \param q_sol         quark propagator ( Write )
+     * \param q_src         source ( Read )
+     * \param xml_out       diagnostic output ( Modify )
+     * \param state         gauge connection state ( Read )
+     * \param invParam      inverter parameters ( Read )
+     * \param quarkSpinType compute only a non-relativistic prop ( Read )
+     * \param ncg_had       number of solver iterations ( Write )
+     */
+   virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
+			   XMLWriter& xml_out,
+			   const typename PropTypeTraits<T>::Type_t& q_src,
+			   Handle< FermState<T,P,Q> > state,
+			   const GroupXML_t& invParam,
+			   QuarkSpinType quarkSpinType,
+			   int& ncg_had) const = 0;
+
+    //! Given a complete propagator as a source, this does all the inversions needed
+    /*!
+     * Provides a default version
+     *
+     * \param q_sol         quark propagator ( Write )
+     * \param q_src         source ( Read )
+     * \param xml_out       diagnostic output ( Modify )
+     * \param state         gauge connection state ( Read )
+     * \param invParam      inverter parameters ( Read )
+     * \param quarkSpinType compute only a non-relativistic prop ( Read )
+     * \param ncg_had       number of solver iterations ( Write )
+     * \param t_src         time slice of source ( Read )
+     * \param j_decay       direction of decay ( Read )
+     * \param obsvP         compute currents and residual mass ( Read )
+     * \param ncg_had       number of solver iterations ( Write )
+     */
+     virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
+			   XMLWriter& xml_out,
+			   const typename PropTypeTraits<T>::Type_t& q_src,
+			   int t_src, int j_decay,
+			   Handle< FermState<T,P,Q> > state,
+			   const GroupXML_t& invParam,
+			   QuarkSpinType quarkSpinType,
+			   bool obsvP,
+			   int& ncg_had) const
+      {
+	quarkProp_4q(q_sol, xml_out, q_src, state, invParam, quarkSpinType, ncg_had);
+      }
+
+
+
   };
 
 
