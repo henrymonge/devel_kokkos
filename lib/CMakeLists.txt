@@ -11,6 +11,17 @@ if( Chroma_ENABLE_CPP_WILSON_DSLASH)
    target_link_libraries(chromalib PUBLIC CPPWilsonDslash::dslash)
 endif()
 
+SET(Kokkos_ENABLE_HIP ON)
+add_subdirectory(kokkos_src)
+include_directories(${Kokkos_INCLUDE_DIRS})
+
+message(STATUS "Kokkos include dirs=${Kokkos_INCLUDE_DIRS}")
+
+#find_package(Kokkos REQUIRED)
+message(STATUS "Kokkos Kokkos_ENABLE_HIP=${Kokkos_ENABLE_HIP}")
+
+target_link_libraries(chromalib PUBLIC Kokkos::kokkos)
+#target_link_libraries(chromalib kokkos)
 
 set(ChromaLIB_HEADERS
     chroma_config.h
@@ -413,6 +424,7 @@ set(ChromaLIB_HEADERS
 	util/ferm/block_couplings.h
 	util/ferm/disp_soln_cache.h
 	util/ft/sftmom.h
+    kokkos_util/kokkos_defs.h
     util/ft/single_phase.h
 	util/ft/time_slice_set.h
     util/gauge/eesu2.h
@@ -728,6 +740,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/simple_hadron_operator_w.h
 	meas/hadron/group_baryon_operator_w.h
 	meas/hadron/barhqlq_w.h
+    #meas/hadron/barhqlq_w_kokkos.h
 	meas/hadron/baryon_w.h
 	meas/hadron/BuildingBlocks_w.h
 	meas/hadron/curcor2_w.h
@@ -743,7 +756,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/hadron/delta_2pt_w.h
 	meas/hadron/stoch_cond_cont_w.h
 	meas/hadron/mesons_w.h
-	meas/hadron/mesons2_w.h
+	meas/hadron/mesons2_w_kokkos.h
 	meas/hadron/seqpiontest_w.h
 	meas/hadron/baryon_operator_aggregate_w.h
 	meas/hadron/baryon_operator_factory_w.h
@@ -1009,6 +1022,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/inline/hadron/inline_genprop_matelem_colorvec_w.h
 	meas/inline/hadron/inline_genprop_matelem_da_colorvec_w.h
 	meas/inline/hadron/inline_genprop_matelem_pt_colorvec_w.h
+	meas/inline/hadron/inline_inverter_test_w.h
 	meas/inline/hadron/inline_mres_w.h
 	meas/inline/hadron/inline_qpropqio_w.h
 	meas/inline/hadron/inline_qpropadd_w.h
@@ -1366,6 +1380,7 @@ target_sources(chromalib PRIVATE
 	util/ferm/subset_vectors.cc 
 	util/ferm/block_couplings.cc 
 	util/ferm/disp_soln_cache.cc 
+	util/ferm/mgproton.cc 
     util/ft/sftmom.cc 
     util/ft/single_phase.cc 
 	util/ft/time_slice_set.cc 
@@ -1440,6 +1455,7 @@ target_sources(chromalib PRIVATE
 	meas/hadron/dilution_quark_source_const_w.cc 
     util/gauge/cern_gauge_init.cc 
     io/readcern.cc
+    constant.cc
 )
 
 ########################################################
@@ -1585,7 +1601,8 @@ target_sources(chromalib PRIVATE
 	meas/hadron/barcomp_diquark_w.cc 
 	meas/hadron/diquark_w.cc 
     meas/hadron/mescomp_w.cc 
-	meas/hadron/barhqlq_w.cc 
+	meas/hadron/barhqlq_w.cc
+    #meas/hadron/barhqlq_w_kokkos.cc 
     meas/hadron/baryon_seqsrc_w.cc 
     meas/hadron/simple_baryon_seqsrc_w.cc 
 	meas/hadron/barspinmat_w.cc 
@@ -1606,7 +1623,8 @@ target_sources(chromalib PRIVATE
 	meas/hadron/delta_2pt_w.cc 
 	meas/hadron/stoch_cond_cont_w.cc 
     meas/hadron/mesons_w.cc 
-    meas/hadron/mesons2_w.cc 
+#    meas/hadron/mesons2_w.cc
+    meas/hadron/mesons2_w_kokkos.cc 
 	meas/hadron/qqq_w.cc meas/hadron/qqbar_w.cc 
     meas/hadron/baryon_operator_aggregate_w.cc 
     meas/hadron/seqsource_aggregate_w.cc 
@@ -1745,8 +1763,7 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_distillution_noise.cc 
 	meas/inline/hadron/inline_prop_distillation_w.cc 
 	meas/inline/hadron/inline_prop_distillation_stoch_w.cc 
-	meas/inline/hadron/inline_prop_distillution_w.cc 
-	meas/inline/hadron/inline_hadspec_w.cc 
+	meas/inline/hadron/inline_prop_distillution_w.cc  
 	meas/inline/hadron/inline_mesonspec_w.cc 
 	meas/inline/hadron/inline_heavyhadspec_w.cc 
 	meas/inline/hadron/inline_static_light_spec_w.cc 
@@ -1775,6 +1792,7 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_genprop_matelem_colorvec_w.cc 
 	meas/inline/hadron/inline_genprop_matelem_da_colorvec_w.cc 
 	meas/inline/hadron/inline_genprop_matelem_pt_colorvec_w.cc 
+	meas/inline/hadron/inline_inverter_test_w.cc 
 	meas/inline/hadron/inline_mres_w.cc 
 	meas/inline/hadron/inline_qpropqio_w.cc 
 	meas/inline/hadron/inline_qpropadd_w.cc 
@@ -1837,6 +1855,15 @@ target_sources(chromalib PRIVATE
 	meas/inline/smear/inline_smear_aggregate.cc 
 	meas/inline/smear/inline_link_smear.cc
 )
+
+########################################################
+#  Inline Measurement sources w/wo Kokkos
+########################################################
+if(Chroma_ENABLE_KOKKOS)
+   target_sources(chromalib PRIVATE meas/inline/hadron/inline_hadspec_w_kokkos.cc)
+else()
+   target_sources(chromalib PRIVATE meas/inline/hadron/inline_hadspec_w.cc)
+endif()
 
 # Taken Out of original build Makefile.am
 #
@@ -1921,7 +1948,9 @@ endif()
 #######################################################
 if( Chroma_ENABLE_JIT_CLOVER )
   list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit_w.h)
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit2_w.h)
   target_sources(chromalib PRIVATE util/gauge/stout_utils_jit.cc)
+  target_sources(chromalib PRIVATE util/gauge/stout_utils_jit2.cc)
 endif()
 
 
@@ -1951,6 +1980,8 @@ if( Chroma_ENABLE_QUDA )
 	actions/ferm/invert/quda_solvers/quda_gcr_params.h
 	actions/ferm/invert/quda_solvers/quda_multigrid_params.h
 	actions/ferm/invert/quda_solvers/qdpjit_memory_wrapper.h
+	actions/ferm/invert/quda_solvers/quda_eig_params.h
+	actions/ferm/invert/quda_solvers/xml_array_utils.h
 	meas/inline/io/inline_erase_quda_multigrid_space.h
 	update/molecdyn/predictor/quda_predictor.h
 )
@@ -1976,6 +2007,7 @@ target_sources(chromalib PRIVATE
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_wilson_quda_w.cc
+	actions/ferm/invert/quda_solvers/quda_eig_params.cc
 	meas/inline/io/inline_erase_quda_multigrid_space.cc
 	update/molecdyn/predictor/quda_predictor.cc
 )
@@ -2003,6 +2035,8 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_baryon_matelem_colorvec_superb_w.h
      meas/inline/hadron/inline_meson_matelem_colorvec_superb_w.h
      meas/inline/hadron/inline_create_colorvecs_superb.h
+     meas/inline/hadron/inline_eigenvalues_superb_w.h
+     meas/inline/hadron/inline_inverter_test_superb_w.h
   )
   target_sources(chromalib PRIVATE 
      meas/inline/hadron/inline_disco_prob_defl_superb_w.cc
@@ -2011,6 +2045,8 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_baryon_matelem_colorvec_superb_w.cc 
      meas/inline/hadron/inline_meson_matelem_colorvec_superb_w.cc 
      meas/inline/hadron/inline_create_colorvecs_superb.cc
+     meas/inline/hadron/inline_eigenvalues_superb_w.cc
+     meas/inline/hadron/inline_inverter_test_superb_w.cc
   )
   target_include_directories(chromalib PUBLIC ${SUPERBBLAS_DIR}/include)
   add_library(superbblas STATIC IMPORTED )
@@ -2022,7 +2058,7 @@ if( Chroma_ENABLE_SUPERBBLAS )
      add_library(magma STATIC IMPORTED )
      set_target_properties( magma PROPERTIES IMPORTED_LOCATION ${MAGMA_DIR}/lib/libmagma.a )
      target_link_libraries(chromalib PUBLIC magma )
-     if( QDP_BACKEND_CUDA )
+     if( QDP_BACKEND_CUDA  OR Chroma_ENABLE_CUDA)
        target_link_libraries(magma INTERFACE CUDA::cublas CUDA::cublasLt CUDA::cusparse CUDA::cudart)
      endif()
      target_link_libraries(magma INTERFACE BLAS::BLAS ${Chroma_extra_link_flags})
@@ -2035,19 +2071,19 @@ if( Chroma_ENABLE_SUPERBBLAS )
      target_link_libraries(chromalib PUBLIC primme )
      if( Chroma_ENABLE_MAGMA )
         target_link_libraries(primme INTERFACE magma)
-     elseif( QDP_BACKEND_CUDA )
+     elseif( QDP_BACKEND_CUDA OR Chroma_ENABLE_CUDA)
        target_link_libraries(primme INTERFACE CUDA::cublas CUDA::cudart BLAS::BLAS ${Chroma_extra_link_flags})
      else()
        target_link_libraries(primme INTERFACE BLAS::BLAS ${Chroma_extra_link_flags})
      endif()
   endif()
 
-  if( QDP_BACKEND_ROCM )
+  if( QDP_BACKEND_ROCM OR Chroma_ENABLE_ROCM)
      target_compile_options(chromalib PUBLIC ${HIP_CPP_CONFIG})
-     target_link_libraries(superbblas INTERFACE roc::hipblas)
+     target_link_libraries(superbblas INTERFACE roc::hipblas roc::hipsparse roc::hipsolver roc::rocblas roc::rocsolver)
   endif()
-  if( QDP_BACKEND_CUDA )
-    target_link_libraries(superbblas INTERFACE CUDA::cublas CUDA::cublasLt CUDA::cusparse CUDA::cudart)
+  if( QDP_BACKEND_CUDA OR Chroma_ENABLE_CUDA)
+    target_link_libraries(superbblas INTERFACE CUDA::cublas CUDA::cublasLt CUDA::cusparse CUDA::cusolver CUDA::cudart)
   endif()
   target_link_libraries(superbblas INTERFACE BLAS::BLAS ${Chroma_extra_link_flags})
 endif()

@@ -10,6 +10,7 @@
 #include "util/ferm/superb_contractions.h"
 
 #include "qdp_init.h"
+#include <Kokkos_Core.hpp>
 
 #if defined(BUILD_JIT_CLOVER_TERM)
 #if defined(QDPJIT_IS_QDPJITPTX)
@@ -43,6 +44,11 @@
 #ifdef MG_ENABLE_TIMERS
 #include "utils/timer.h"
 #endif
+#endif
+
+
+#ifdef ARCH_PARSCALAR
+#include "qmp.h"
 #endif
 
 namespace Chroma 
@@ -133,7 +139,7 @@ namespace Chroma
     if (! QDP_isInitialized())
       QDP_initialize(argc, argv);
 #endif
-
+    Kokkos::initialize( *argc, *argv );
     for(int i=0; i < *argc; i++) 
     {
       // Get argv[i] into a std::string
@@ -267,10 +273,17 @@ namespace Chroma
 #    endif
     setVerbosityQuda(QUDA_SUMMARIZE, "", stdout);
 
-    // Initialize MAGMA before anything else
-#    if defined(BUILD_MAGMA)
-    SB::detail::getMagmaContext(cuda_device);
+    QDPIO::cout << "Calling initCommsGridQuda\n";
+#    ifdef ARCH_PARSCALAR
+    int ndim = QMP_get_logical_number_of_dimensions();
+    const int* dims = QMP_get_logical_dimensions();
+#    else
+    int ndim = 4;
+    const int dims[4] = {1, 1, 1, 1};
 #    endif
+    QDPIO::cout << "calling initCommsGridQuda with ndim = " << ndim << " and geom=( " << dims[0]
+		<< ", " << dims[1] << ", " << dims[2] << ", " << dims[3] << " )\n";
+    initCommsGridQuda(ndim, dims, nullptr, nullptr);
 
     QDPIO::cout << "Initializing QUDA device (using CUDA device no. " << cuda_device << ")"
 		<< std::endl;
@@ -296,11 +309,6 @@ namespace Chroma
     QDP_setGPUCommSplit();
 #    endif
 
-    // Initialize MAGMA before anything else
-#    if defined(BUILD_MAGMA)
-    SB::detail::getMagmaContext(dev);
-#    endif
-
     QDPIO::cout << "Initializing start GPUs" << std::endl;
 #    ifdef QDP_FIX_GPU_SETTING
     QDP_startGPU(dev);
@@ -309,12 +317,24 @@ namespace Chroma
 #    endif
 #  endif // BUILD_CUDA
 
+#elif defined(BUILD_SB) && defined(SUPERBBLAS_USE_GPU)
+    // Get device to run
+    int gpu_device = SB::detail::getGpuContext()->device;
+
+#  ifdef BUILD_QUDA
+    setVerbosityQuda(QUDA_SUMMARIZE, "", stdout);
+    QDPIO::cout << "Initializing QUDA device (using CUDA device no. " << gpu_device << ")"
+		<< std::endl;
+    initQudaDevice(gpu_device);
+    initQudaMemory();
+#  endif
+
 #else // defined QDP_IS_QDPJIT
 #  ifdef BUILD_QUDA
-   {
-     std::cout << "Initializing QUDA with initQuda(-1)" <<  std::endl;
-     initQuda(-1);
-   }
+    {
+      std::cout << "Initializing QUDA with initQuda(-1)" << std::endl;
+      initQuda(-1);
+    }
 #  endif
 #endif
 
@@ -378,6 +398,8 @@ namespace Chroma
     endQuda();
 #endif
 
+Kokkos::finalize();
+
 #ifdef BUILD_MGPROTO
 #ifdef MG_ENABLE_TIMERS
     MG::Timer::TimerAPI::reportAllTimer();
@@ -390,6 +412,11 @@ namespace Chroma
 #if defined(QDPJIT_IS_QDPJITPTX)
     QDP_info_primary("Time for packForQUDA: %f sec",PackForQUDATimer::Instance().get() / 1.0e6);
 #endif
+#endif
+
+#ifdef BUILD_SB
+    // Call superbblas finisher
+    SB::finish();
 #endif
 
     if (! QDP_isInitialized())
@@ -408,12 +435,13 @@ namespace Chroma
       Chroma::getXMLLogInstance().close();
     }
 
+    // Free memory for constants
+    constant_destroy();
+
     // Destroy singletons
     destroySingletons();
 
     QDP_finalize();
-
-
   }
 
 

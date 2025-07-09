@@ -176,6 +176,12 @@ namespace Chroma
   {
     START_CODE();
 
+    QDPIO::cout << "\n\n***************\nUsing QDP Contractions\n***************\n\n";
+    double time;
+    StopWatch swatch;
+    swatch.reset();
+    swatch.start();
+
     if ( Ns != 4 || Nc != 3 )		/* Code is specific to Ns=4 and Nc=3. */
       return;
 
@@ -264,6 +270,10 @@ namespace Chroma
     } // end for(gamma_value)
 
     pop(xml_bar);
+
+    swatch.stop();
+    time=swatch.getTimeInSeconds();
+    QDPIO::cout << "Time QDP= " << time << "\n";
 
     END_CODE();
   }
@@ -588,7 +598,7 @@ namespace Chroma
 	  // NOTE: there is NO  1/2  multiplying hsum
 	  barprop[baryons][sink_mom_num][t] = hsum[sink_mom_num][t];
 	}
-
+    
     } // end loop over baryons
 
     END_CODE();

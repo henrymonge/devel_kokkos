@@ -28,7 +28,8 @@ option(Chroma_ENABLE_LAPACK "Enable Lapack Binding in QDPLapack" OFF)
 option(Chroma_ENABLE_OPENMP "Enable OpenMP" OFF)
 option(Chroma_ENABLE_SUPERBBLAS  "Enable tasks using Superbblas" OFF)
 option(Chroma_ENABLE_PRIMME  "Build with PRIMME" OFF)
-option(Chroma_ENABLE_MAGMA  "Build with MAGMA" OFF)
+option(Chroma_ENABLE_CUDA  "Build with CUDA" OFF)
+option(Chroma_ENABLE_ROCM  "Build with ROCM" OFF)
 set(BLAS_SUFFIX_LINK_FLAGS "" CACHE STRING "Extra linking flags placed after BLAS")
 separate_arguments(Chroma_extra_link_flags UNIX_COMMAND ${BLAS_SUFFIX_LINK_FLAGS})
 message(STATUS "Chroma extra links: ${Chroma_extra_link_flags}")
@@ -53,7 +54,6 @@ option(Chroma_USE_MGPROTO "Use the MGProto Multigrid solver" OFF)
 
 set(SUPERBBLAS_DIR "" CACHE PATH "path to superbblas installation")
 set(PRIMME_DIR "" CACHE PATH "path to PRIMME installation")
-set(MAGMA_DIR "" CACHE PATH "path to MAGMA installation")
 
 ##################
 # End of Options
@@ -79,7 +79,7 @@ endif()
 list( APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake )
 
 find_package(GMP)
-if( GMP_FOUND ) 
+if( GMP_FOUND )
    set(BUILD_GMP_REMEZ 1) # For the header file
 endif()
 # Create an imported target
@@ -95,7 +95,7 @@ if(Chroma_ENABLE_OPENMP)
   if( NOT OpenMP_FOUND )
   	find_package(OpenMP REQUIRED)
   endif()
-  
+
   if( NOT Threads_FOUND )
   	find_package(Threads REQUIRED)
   endif()
@@ -118,7 +118,7 @@ endif()
 # 2nd: Deal with QPhiX
 ##########################
 if( Chroma_ENABLE_QPHIX )
-#  
+#
 #  Deal with QPhix
 #  find_package(QPhiX)
 endif()
@@ -143,8 +143,10 @@ if( Chroma_ENABLE_QUDA )
   find_package(QUDA REQUIRED)
   if( QUDA_TARGET_CUDA )
     set(CHROMA_TARGET_CUDA 1)
+    set(Chroma_ENABLE_CUDA ON)
   elseif( QUDA_TARGET_HIP )
     set(CHROMA_TARGET_HIP 1)
+    set(Chroma_ENABLE_ROCM ON)
   endif()
   if (QDP_IS_QDPJIT)
      message(STATUS "QDP is QDPJIT so enabling QDPJIT Interfaces")
@@ -153,14 +155,17 @@ if( Chroma_ENABLE_QUDA )
      set(BUILD_QUDA_DEVIFACE_SPINOR 1)
   endif()
 endif()
+if ( Chroma_ENABLE_CUDA AND Chroma_ENABLE_ROCM )
+  message( FATAL_ERROR "Don't set Chroma_ENABLE_CUDA and Chroma_ENABLE_ROCM" )
+endif()
 
 ###########################
 # 5th: Deal with MDWF
 ###########################
 if( Chroma_ENABLE_MDWF )
-# 
+#
 # Gonna need to write a find module for this
-# 
+#
 endif()
 
 ####################################################
@@ -182,7 +187,7 @@ if( Chroma_ENABLE_LAPACK )
   set(QDPLapack_BINDING "lapack")
 endif()
 add_subdirectory(other_libs/qdp-lapack)
- 
+
 ###########################
 # 6th: Deal with superbblas
 ###########################
@@ -191,7 +196,7 @@ if( Chroma_ENABLE_SUPERBBLAS )
 
   include(FindBLAS)
   find_package(BLAS REQUIRED)
-  
+
   if( QDP_BACKEND_ROCM AND NOT HIP_CPP_CONFIG )
      find_package(HIP REQUIRED)
      execute_process(
@@ -205,20 +210,18 @@ if( Chroma_ENABLE_SUPERBBLAS )
      mark_as_advanced(HIP_CPP_CONFIG)
   endif()
 
-  if( QDP_BACKEND_ROCM )
+  if( QDP_BACKEND_ROCM OR Chroma_ENABLE_ROCM)
      find_package(hipBLAS REQUIRED)
+     find_package(rocBLAS REQUIRED)
+     find_package(hipSPARSE REQUIRED)
+     find_package(hipSOLVER REQUIRED)
+     find_package(rocSOLVER REQUIRED)
   endif()
-  if( Chroma_ENABLE_CUDA )
+  if( QDP_BACKEND_CUDA OR Chroma_ENABLE_CUDA)
      find_package(CUDAToolkit REQUIRED)
   endif()
 
   set(BUILD_SB 1)
-
-  # Deal with MAGMA
-  if( Chroma_ENABLE_MAGMA )
-    message(STATUS "Enabling MAGMA")
-    set(BUILD_MAGMA 1)
-  endif()
 
   # Deal with PRIMME
   if( Chroma_ENABLE_PRIMME )
@@ -227,17 +230,45 @@ if( Chroma_ENABLE_SUPERBBLAS )
   endif()
 endif()
 
+# Setting Kokkos stuff
+#####################################
+
+#For kokkos in line
+if( Chroma_ENABLE_KOKKOS )
+#    add_subdirectory(other_libs/kokkos_src)
+#    SET(Kokkos_ENABLE_HOST ON CACHE STRING "Setting Kokkos_ENABLE_HOST globally")
+#    include_directories(${Kokkos_INCLUDE_DIRS})
+#    message(STATUS "Kokkos include dirs=${Kokkos_INCLUDE_DIRS}")
+endif()
+
+#find_package(Kokkos REQUIRED)
+#target_link_libraries(chromalib PUBLIC Kokkos::kokkos)
+
+#target_link_libraries(chromalib PUBLIC Kokkos::kokkos)
+SET(Kokkos_ENABLE_HIP ON CACHE STRING "Setting Kokkos_ENABLE_HIP globally")
+
+if(Kokkos_ENABLE_HIP)
+  add_compile_definitions(Kokkos_ENABLE_HIP=1)
+endif()
+
+if(Kokkos_ENABLE_OPENMP)
+  add_compile_definitions(Kokkos_ENABLE_OPENMP=1)
+endif()
+
+if(Chroma_ENABLE_KOKKOS)
+  add_compile_definitions(Chroma_ENABLE_KOKKOS=1)
+endif()
 
 #####################################
 # Configure chroma_config_internal.h
 #####################################
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/lib/chroma_config_internal.h.cmake.in
 			   lib/chroma_config_internal.h)
-			
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/chroma_config_internal.h DESTINATION include)
 
 # Now we are ready to build in lib
-# Heaven help us. 
+# Heaven help us.
 
 add_subdirectory(lib)
 add_subdirectory(mainprogs/main)
@@ -247,7 +278,7 @@ add_subdirectory(mainprogs/tests)
 # if needed
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindGMP.cmake
 		DESTINATION lib/cmake/Chroma )
-		  
+
 #install the export description of the targets
 install(EXPORT ChromaTargets
         FILE ChromaTargets.cmake
