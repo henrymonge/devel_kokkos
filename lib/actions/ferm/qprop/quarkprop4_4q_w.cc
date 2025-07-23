@@ -168,7 +168,6 @@ namespace Chroma
   typedef LatticePropagator LP;
   typedef LatticeFermion LF;
   typedef multi1d<LatticeColorMatrix> LCM;
-  template<>
 
   //! Given a complete propagator as a source, this does all the inversions needed
   /*! \ingroup qprop
