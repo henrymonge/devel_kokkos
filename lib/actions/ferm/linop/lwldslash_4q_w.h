@@ -7,8 +7,9 @@
 #define __lwldslash_4q_h__
 
 #include "state.h"
+#include "util/ferm/transf.h"
 #include "io/aniso_io.h"
-#include "actions/ferm/linop/lwldslash_base_w.h"
+#include "actions/ferm/linop/lwldslash_base_4q_w.h"
 
 
 namespace Chroma 
@@ -257,7 +258,7 @@ namespace Chroma
 
   template<typename T, typename P, typename Q>
   void 
-  QDPWilson4QDslashT<T,P,Q>::apply_D(T& chi, const T& psi, 
+  QDPWilson4QDslashT<T,P,Q>::apply_D(T& chi_in, const T& psi_in, 
 			  enum PlusMinus isign, int cb) const
   {
     START_CODE();
@@ -281,6 +282,13 @@ namespace Chroma
      * and all args must be known at compile time. Hence, the function names carry
      * (as functions usually do) the meaning (and implicit args) to a function.
      */
+    LatticeFermion psi;
+    PropToFerm(psi_in, psi, 0, 0);
+
+
+    LatticeFermion chi;
+    PropToFerm(chi_in, chi, 0, 0);
+
     switch (isign)
     {
     case PLUS:
@@ -326,7 +334,7 @@ namespace Chroma
       break;
     }
 
-    QDPWilson4QDslashT<T,P,Q>::getFermBC().modifyF(chi, QDP::rb[cb]);
+    QDPWilson4QDslashT<T,P,Q>::getFermBC().modifyF(chi_in, QDP::rb[cb]);
 #else
     QDPIO::cerr<<"lwldslash_w: not implemented for NC!=3\n";
     QDP_abort(13) ;
@@ -336,16 +344,16 @@ namespace Chroma
 
 
 
-  typedef QDPWilson4QDslashT<LatticeFermion,
+  typedef QDPWilson4QDslashT<LatticePropagator,
 			   multi1d<LatticeColorMatrix>,
 			   multi1d<LatticeColorMatrix> > QDPWilson4QDslash;
 
 
-  typedef QDPWilson4QDslashT<LatticeFermionF,
+  typedef QDPWilson4QDslashT<LatticePropagatorF,
 			   multi1d<LatticeColorMatrixF>,
 			   multi1d<LatticeColorMatrixF> > QDPWilson4QDslashF;
 
-  typedef QDPWilson4QDslashT<LatticeFermionD,
+  typedef QDPWilson4QDslashT<LatticePropagatorD,
 			   multi1d<LatticeColorMatrixD>,
 			   multi1d<LatticeColorMatrixD> > QDPWilson4QDslashD;
 

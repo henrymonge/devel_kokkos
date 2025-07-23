@@ -24,7 +24,7 @@ namespace Chroma
    * \param ncg_had  number of CG iterations ( Write )
    */
 
-  void quarkProp4_4q(LatticePropagator& q_sol, 
+  void quarkProp4(LatticePropagator& q_sol, 
 		  XMLWriter& xml_out,
 		  const LatticePropagator& q_src,
 		  Handle< SystemSolver<LatticeFermion> > qprop,

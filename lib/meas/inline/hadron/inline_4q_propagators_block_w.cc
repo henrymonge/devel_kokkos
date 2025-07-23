@@ -411,17 +411,32 @@ namespace Chroma
 	QDPIO::cout << "Try the various factories" << std::endl;
 
 	// Typedefs to save typing
+
+
+
+#if 0
 	typedef LatticeFermion               T;
+#else
+    typedef LatticePropagator               T;
+#endif
+
 	typedef multi1d<LatticeColorMatrix>  P;
 	typedef multi1d<LatticeColorMatrix>  Q;
 
+
+    TheFermionActionFactory::Instance().createObject(params.param.fermact.id,
+                                   fermacttop,
+                                   params.param.fermact.path);
+
+    
 	// Generic Wilson-Type stuff
 	Handle< FermionAction<T,P,Q> >
 	  S_f(TheFermionActionFactory::Instance().createObject(params.param.fermact.id,
 							       fermacttop,
 							       params.param.fermact.path));
-
+    
 	Handle< FermState<T,P,Q> > state(S_f->createState(u));
+
 
 	QDPIO::cout << "Suitable factory found: compute the quark prop" << std::endl;
 	swatch.start();

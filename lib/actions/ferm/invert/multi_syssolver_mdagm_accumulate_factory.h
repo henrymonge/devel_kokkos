@@ -26,6 +26,17 @@ namespace Chroma
 		  StringFactoryError> >
   TheMdagMFermMultiSystemSolverAccumulateFactory;
 
+  //! MdagM system solver factory (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<MdagMMultiSystemSolverAccumulate<LatticePropagator>,
+          std::string,
+          TYPELIST_3(XMLReader&, const std::string&, Handle< LinearOperator<LatticePropagator> >),
+          MdagMMultiSystemSolverAccumulate<LatticePropagator>* (*)(XMLReader&,
+                                  const std::string&,
+                                  Handle< LinearOperator<LatticePropagator> >),
+          StringFactoryError> >
+  TheMdagMFerm4QMultiSystemSolverAccumulateFactory;
 
   //! MdagM system solver factory (foundry)
   /*! @ingroup invert */
@@ -39,7 +50,17 @@ namespace Chroma
 		  StringFactoryError> >
   TheMdagMFermMultiSystemSolverAccumulateArrayFactory;
 
-
+  //! MdagM system solver factory (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<MdagMMultiSystemSolverAccumulateArray<LatticePropagator>,
+          std::string,
+          TYPELIST_3(XMLReader&, const std::string&, Handle< LinearOperatorArray<LatticePropagator> >),
+          MdagMMultiSystemSolverAccumulateArray<LatticePropagator>* (*)(XMLReader&,
+                                   const std::string&,
+                                   Handle< LinearOperatorArray<LatticePropagator> >),
+          StringFactoryError> >
+  TheMdagMFerm4QMultiSystemSolverAccumulateArrayFactory;
   //! MdagM system solver factory (foundry)
   /*! @ingroup invert */
   typedef Chroma::SingletonHolder< 

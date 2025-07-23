@@ -23,6 +23,8 @@ namespace Chroma
     typedef Handle< FermState< LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > FSHandle;
     typedef Handle< FermState< LatticeFermionF, multi1d<LatticeColorMatrixF>, multi1d<LatticeColorMatrixF> > > FSHandleF;
     typedef Handle< FermState< LatticeFermionD, multi1d<LatticeColorMatrixD>, multi1d<LatticeColorMatrixD> > > FSHandleD;
+    typedef Handle< FermState< LatticePropagator, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > FSHandle4Q;
+
   }
 
   //! MdagM system solver factory (foundry)
@@ -37,6 +39,20 @@ namespace Chroma
 							 Handle< LinearOperator<LatticeFermion> >), 
 		  StringFactoryError> >
   TheMdagMFermSystemSolverFactory;
+
+
+  //! MdagM system solver factory 4Q (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<MdagMSystemSolver<LatticePropagator>,
+          std::string,
+          TYPELIST_4(XMLReader&, const std::string&, FactoryEnv::FSHandle4Q, Handle< LinearOperator<LatticePropagator> >),
+          MdagMSystemSolver<LatticePropagator>* (*)(XMLReader&,
+                             const std::string&,
+                             FactoryEnv::FSHandle4Q,
+                             Handle< LinearOperator<LatticePropagator> >),
+          StringFactoryError> >
+  TheMdagMFerm4QSystemSolverFactory;
 
   typedef Chroma::SingletonHolder< 
     ObjectFactory<MdagMSystemSolver<LatticeFermionF>, 
@@ -74,6 +90,31 @@ namespace Chroma
 		  StringFactoryError> >
   TheMdagMFermSystemSolverArrayFactory;
 
+  //! MdagM system solver factory (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<MdagMSystemSolverArray<LatticePropagator>,
+          std::string,
+          TYPELIST_4(XMLReader&, const std::string&, FactoryEnv::FSHandle4Q, Handle< LinearOperatorArray<LatticePropagator> >),
+          MdagMSystemSolverArray<LatticePropagator>* (*)(XMLReader&,
+                                  const std::string&,
+                                  FactoryEnv::FSHandle4Q,
+                                  Handle< LinearOperatorArray<LatticePropagator> >),
+          StringFactoryError> >
+  TheMdagMFerm4QSystemSolverArrayFactory;
+
+  //! MdagM system solver factory (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder< 
+    ObjectFactory<MdagMSystemSolverArray<LatticePropagator>, 
+          std::string,       
+          TYPELIST_4(XMLReader&, const std::string&, FactoryEnv::FSHandle4Q, Handle< LinearOperatorArray<LatticePropagator> >),
+          MdagMSystemSolverArray<LatticePropagator>* (*)(XMLReader&,
+                                  const std::string&,
+                                  FactoryEnv::FSHandle4Q,
+                                  Handle< LinearOperatorArray<LatticePropagator> >),
+          StringFactoryError> >
+  TheMdagMFerm4QSystemSolverArrayFactory;
 
   //! MdagM system solver factory (foundry)
   /*! @ingroup invert */

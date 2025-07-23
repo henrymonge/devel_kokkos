@@ -4,8 +4,8 @@
  * @brief Wilson-like fermion actions
  */
 
-#ifndef __wilstype_fermact_w_h__
-#define __wilstype_fermact_w_h__
+#ifndef __wilstype_fermact_4q_w_h__
+#define __wilstype_fermact_4q_w_h__
 
 #include "fermact.h"
 #include "eoprec_linop.h"
@@ -20,11 +20,11 @@ namespace Chroma
    * Wilson-like fermion actions
    */
   template<typename T, typename P, typename Q>
-  class WilsonTypeFermAct : public DiffFermAct4D<T,P,Q>
+  class WilsonTypeFermAct4Q : public DiffFermAct4D<T,P,Q>
   {
   public:
     //! Virtual destructor to help with cleanup;
-    virtual ~WilsonTypeFermAct() {}
+    virtual ~WilsonTypeFermAct4Q() {}
 
     //! Produce a linear operator M^dag.M for this action
     /*! Default implementation */
@@ -90,11 +90,11 @@ namespace Chroma
    * Wilson-like fermion actions
    */
   template<typename T, typename P, typename Q>
-  class WilsonTypeFermAct5D : public DiffFermAct5D<T,P,Q>
+  class WilsonTypeFermAct5D4Q : public DiffFermAct5D<T,P,Q>
   {
   public:
     //! Virtual destructor to help with cleanup;
-    virtual ~WilsonTypeFermAct5D() {}
+    virtual ~WilsonTypeFermAct5D4Q() {}
 
     //! Produce a linear operator M^dag.M for this action
     /*! Default implementation */
@@ -179,6 +179,7 @@ namespace Chroma
 			   const GroupXML_t& invParam,
 			   QuarkSpinType quarkSpinType,
 			   int& ncg_had) const;
+    
 
   };
 

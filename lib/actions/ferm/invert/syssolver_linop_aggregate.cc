@@ -20,6 +20,7 @@
 #include "actions/ferm/invert/syssolver_linop_fgmres_dr.h"
 #include "actions/ferm/invert/projector_random.h"
 #include "actions/ferm/invert/projector_null.h"
+#include "actions/ferm/invert/projector_null_4q.h"
 
 
 #include "chroma_config.h"

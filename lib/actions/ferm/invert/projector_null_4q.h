@@ -3,8 +3,8 @@
  *  \brief Oblique projector to a random vector (useful for testing)
  */
 
-#ifndef __projector_null_h__
-#define __projector_null_h__
+#ifndef __projector_null_4q_h__
+#define __projector_null_4q_h__
 
 #include "chroma_config.h"
 #include "handle.h"
@@ -18,7 +18,7 @@ namespace Chroma
   /*! \ingroup invert
    */
   template<typename T>
-  class ProjectorNull : public Projector<T>
+  class ProjectorNull4Q : public Projector<T>
   {
   public:
     using Ts = const std::vector<std::shared_ptr<T>>;
@@ -28,12 +28,12 @@ namespace Chroma
     /*!
      * \param A_        Linear operator ( Read )
      */
-    ProjectorNull(Handle<LinearOperator<T>> A_) : A(A_)
+    ProjectorNull4Q(Handle<LinearOperator<T>> A_) : A(A_)
     {
     }
 
     //! Destructor is automatic
-    ~ProjectorNull() {}
+    ~ProjectorNull4Q() {}
 
     //! Return the subset on which the operator acts
     const Subset& subset() const
@@ -74,19 +74,19 @@ namespace Chroma
     //! Return U[i]
     void U(unsigned int, T&) const override
     {
-      throw std::runtime_error("ProjectorNull: rank of the projector is null");
+      throw std::runtime_error("ProjectorNull4Q: rank of the projector is null");
     }
 
     //! Return V[i]
     void V(unsigned int, T&) const override
     {
-      throw std::runtime_error("ProjectorNull: rank of the projector is null");
+      throw std::runtime_error("ProjectorNull4Q: rank of the projector is null");
     }
 
     //! Return U[i]^H*A*V[i]
     void lambda(unsigned int, DComplex&) const override
     {
-      throw std::runtime_error("ProjectorNull: rank of the projector is null");
+      throw std::runtime_error("ProjectorNull4Q: rank of the projector is null");
     }
 
   private:
@@ -94,31 +94,22 @@ namespace Chroma
   };
 
   //! Null projector namespace
-  namespace ProjectorNullEnv
+  namespace ProjectorNull4QEnv
   {
-    Projector<LatticeFermion>* createProjector(
-      XMLReader&, const std::string&,
-      Handle<FermState<LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix>>>,
-      Handle<LinearOperator<LatticeFermion>> A)
-    {
-      return new ProjectorNull<LatticeFermion>(A);
-    }
-
-/*
     Projector<LatticePropagator>* createProjector(
       XMLReader&, const std::string&,
-      Handle<FermState<LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix>>>,
-      Handle<LinearOperator<LatticeFermion>> A)
+      Handle<FermState<LatticePropagator, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix>>>,
+      Handle<LinearOperator<LatticePropagator>> A)
     {
-      return new ProjectorNull<LatticePropagator>(A);
+      return new ProjectorNull4Q<LatticePropagator>(A);
     }
-*/
+
     //! Register the projector
     inline bool registerAll() {
       static bool registered = false;
       if (registered) return true;
       registered = true;
-      return Chroma::TheLinOpFermProjectorFactory::Instance().registerObject("NULL_PROJECTOR",
+      return Chroma::TheLinOpFerm4QProjectorFactory::Instance().registerObject("NULL_PROJECTOR_4Q",
 									     createProjector);
     }
   }

@@ -107,6 +107,23 @@ namespace Chroma
 			       invLinOp(state,invParam));
   }
 
+  template<>
+  SystemSolver<LatticePropagator>*
+  FermAct4D<LatticePropagator,
+	    multi1d<LatticeColorMatrix>,
+	    multi1d<LatticeColorMatrix> >::qprop(Handle< FermState<LatticePropagator, 
+						 multi1d<LatticeColorMatrix>,
+						 multi1d<LatticeColorMatrix> > > state,
+						 const GroupXML_t& invParam) const
+  {
+    // Typedefs to save typing
+    typedef LatticePropagator               T;
+
+    QDPIO::cout << "Using the SystemSolver<LatticePropagator>" <<std::endl;
+    return new FermActQprop<T>(linOp(state),
+			       invLinOp(state,invParam));
+  }
+
 
   /*! \ingroup qprop */
   template<>

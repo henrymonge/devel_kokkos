@@ -20,12 +20,12 @@ namespace Chroma
    * This routine is specific to Wilson fermions!
    */
   
-  class UnprecClover4QLinOp : public UnprecLinearOperator<LatticeFermion, 
+  class UnprecClover4QLinOp : public UnprecLinearOperator<LatticePropagator, 
 			    multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >
   {
   public:
     // Typedefs to save typing
-    typedef LatticeFermion               T;
+    typedef LatticePropagator               T;
     typedef multi1d<LatticeColorMatrix>  P;
     typedef multi1d<LatticeColorMatrix>  Q;
 
@@ -48,11 +48,11 @@ namespace Chroma
 		const CloverFermActParams& param_);
 
     //! Apply the operator onto a source std::vector
-    void operator() (LatticeFermion& chi, const LatticeFermion& psi, enum PlusMinus isign) const;
+    void operator() (LatticePropagator& chi, const LatticePropagator& psi, enum PlusMinus isign) const;
 
     //! Derivative of unpreconditioned Clover dM/dU
     void deriv(multi1d<LatticeColorMatrix>& ds_u, 
-	       const LatticeFermion& chi, const LatticeFermion& psi, 
+	       const LatticePropagator& chi, const LatticePropagator& psi, 
 	       enum PlusMinus isign) const;
 
     //! Return flops performed by the operator()

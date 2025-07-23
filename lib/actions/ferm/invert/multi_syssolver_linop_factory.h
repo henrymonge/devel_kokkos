@@ -26,6 +26,18 @@ namespace Chroma
 		  StringFactoryError> >
   TheLinOpFermMultiSystemSolverFactory;
 
+  //! LinOp system solver factory 4Q (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<LinOpMultiSystemSolver<LatticePropagator>,
+          std::string,
+          TYPELIST_3(XMLReader&, const std::string&, Handle< LinearOperator<LatticePropagator> >),
+          LinOpMultiSystemSolver<LatticePropagator>* (*)(XMLReader&,
+                                  const std::string&,
+                                  Handle< LinearOperator<LatticePropagator> >),
+          StringFactoryError> >
+  TheLinOpFerm4QMultiSystemSolverFactory;
+
 
 #if 0
   //! LinOp system solver factory (foundry)

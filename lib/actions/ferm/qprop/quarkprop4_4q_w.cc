@@ -4,7 +4,8 @@
  *  Given a complete propagator as a source, this does all the inversions needed
  */
 
-#include "wilstype_fermact_w.h"
+//#include "wilstype_fermact_w.h"
+#include "wilstype_fermact_4q_w.h"
 #include "util/ferm/transf.h"
 #include "actions/ferm/qprop/quarkprop4_4q_w.h"
 #include "actions/ferm/invert/syssolver_linop_factory.h"
@@ -12,6 +13,8 @@
 #include "actions/ferm/invert/multi_syssolver_linop_factory.h"
 #include "actions/ferm/invert/multi_syssolver_mdagm_factory.h"
 #include "actions/ferm/invert/multi_syssolver_mdagm_accumulate_factory.h"
+
+#define FOURQ_SOLVE 1
 
 
 namespace Chroma 
@@ -29,7 +32,7 @@ namespace Chroma
    */
 
   template<typename T>
-  void quarkProp4_4q_a(LatticePropagator& q_sol, 
+  void quarkProp4_a(LatticePropagator& q_sol, 
 		    XMLWriter& xml_out,
 		    const LatticePropagator& q_src,
 		    Handle< SystemSolver<T> > qprop,
@@ -42,161 +45,62 @@ namespace Chroma
     push(xml_out, "QuarkProp4");
 
     ncg_had = 0;
-
-    int start_spin;
-    int end_spin;
-		int num_spin;
-
-    switch (quarkSpinType)
-    {
-    case QUARK_SPIN_TYPE_FULL:
-      start_spin = 0;
-      end_spin = Ns;
-			num_spin = Ns;
-      break;
-
-    case QUARK_SPIN_TYPE_UPPER:
-      start_spin = 0;
-      end_spin = Ns/2;
-			num_spin = Ns/2;
-      break;
-
-    case QUARK_SPIN_TYPE_LOWER:
-      start_spin = Ns/2;
-      end_spin = Ns;
-			num_spin = Ns/2;
-      break;
-    }
-
-
 		{ 
-			multi1d<Double> norm_chi(Nc*num_spin);
-			multi1d<Double> fact(Nc*num_spin);
-			std::vector< std::shared_ptr<const LatticeFermion> > chi_ptrs(Nc*num_spin);
-			std::vector< std::shared_ptr<LatticeFermion> > psi_ptrs(Nc*num_spin);
+			Double norm_chi;
+			Double fact;
+			LatticeFermion  chi;
+			LatticeFermion  psi;
 			// This version loops over all color and spin indices
-			int idx=0;
-			for(int color_source = 0; color_source < Nc; ++color_source)
-			{
-				for(int spin_source = start_spin; spin_source < end_spin; ++spin_source)
-				{
-					psi_ptrs[idx] = std::make_shared<LatticeFermion>(zero);
-					
 
-					// Extract a fermion source
-					// Due to the vaguaries of initializing a std::shared<const T>
-					// We go via a temporary.
-					LatticeFermion tmp;
-					PropToFerm(q_src, tmp, color_source, spin_source);
+            psi = zero;
+            
 
-					// Normalize temporary 
-					norm_chi[idx] = sqrt(norm2(tmp));
-					fact[idx] = toDouble(1)/norm_chi[idx];
-					tmp *= fact[idx];
-				
-					// Create the RHS 	
-					chi_ptrs[idx] = std::make_shared<const LatticeFermion>(tmp);
+            // Extract a fermion source
+            // Due to the vaguaries of initializing a std::shared<const T>
+            // We go via a temporary.
+            LatticeFermion tmp;
+            //PropToFerm(q_src, tmp, color_source, spin_source);
+            PropToFerm(q_src, tmp, 0, 0);
 
-					// Update Index
-					idx++;
-				}
-			}
+            // Normalize temporary 
+            norm_chi = sqrt(norm2(tmp));
+            fact = toDouble(1)/norm_chi;
+            tmp *= fact;
+        
+            // Create the RHS 	
+            chi = tmp;
 
 			// Do the MultiRHS solve
 			//
 			// Convention: In true multiRHS solve only solution 0 will have non-zero
 			// n-count for now. That way accumulating ncg_had by adding 0s potentially
 			// will work.
-			std::vector<SystemSolverResults_t> results = (*qprop)(psi_ptrs, chi_ptrs);
 
+            SystemSolverResults_t results = (*qprop)(psi, chi);
 			// Accumulate ncg_had and restore solution into solution prop	
 			ncg_had = 0;
-			for(int idx=0; idx < Nc*num_spin; idx++) {
 
-				// Undo rescale by multiplying by 1/fact = norm_chi[idx]
-				*(psi_ptrs[idx]) *= norm_chi[idx]; 
+            // Undo rescale by multiplying by 1/fact = norm_chi[idx]
+            psi *= norm_chi; 
 
-				// break colorspin index into color and spin indices. 
-				int spin_idx = idx%num_spin + start_spin;
-				int col_idx =idx/num_spin; 
+            // Insert  solution into propagator
+            //FermToProp(*(psi_ptrs[idx]), q_sol, col_idx, spin_idx);
+            FermToProp(psi, q_sol, 0,0);
 
-				// Insert  solution into propagator
-				FermToProp(*(psi_ptrs[idx]), q_sol, col_idx, spin_idx);
+            // Accumulate ncg_had. This will be correct if we follow
+            // the convention that true mrhs solvers return only a count
+            // in results[0].n_count and keep all others as zero
+            // Fake MRHS solvers (which loop over sources) can fill out 
+            // an accurate iteration count for each solve. 
+            ncg_had += results.n_count;
+            push(xml_out,"Qprop");
+            write(xml_out, "color_source", 0);
+            write(xml_out, "spin_source", 0);
+            write(xml_out, "n_count", results.n_count);
+            write(xml_out, "resid", results.resid);
+            pop(xml_out);
 
-				// Accumulate ncg_had. This will be correct if we follow
-				// the convention that true mrhs solvers return only a count
-				// in results[0].n_count and keep all others as zero
-				// Fake MRHS solvers (which loop over sources) can fill out 
-				// an accurate iteration count for each solve. 
-				ncg_had += results[idx].n_count;
-				push(xml_out,"Qprop");
-				write(xml_out, "color_source", col_idx);
-				write(xml_out, "spin_source", spin_idx);
-				write(xml_out, "n_count", results[idx].n_count);
-				write(xml_out, "resid", results[idx].resid);
-				pop(xml_out);
-
-			} /* end loop over solutions */
 		} // psis, chis etc go away here. 
-
-    switch (quarkSpinType)
-    {
-			case QUARK_SPIN_TYPE_FULL:
-				// Do nothing here
-				break;
-
-			case QUARK_SPIN_TYPE_UPPER:
-			{
-				/* Since this is a non-relativistic prop 
-				 * negate the quark props 'lower' components
-				 * This is because I should have only done a half inversion 
-				 * on non relativistic channels, where the last two columns of the 
-				 * source MUST be the negation of the first two columns. 
-				 * Hence the last two columns of the solution must also be 
-				 * negations of the first two columns. The half inversion itself
-				 * has not put in the minus sign, it just copied the columns.
-				 * The post multiply by Gamma_5 adds in the required - sign 
-				 * in the last two columns 
-				 */ 
-				/* Apply Gamma_5 = Gamma(15) by negating the fermion extracted */
-				for(int color_source = 0; color_source < Nc ; ++color_source) {
-					for(int spin_source = Ns/2; spin_source < Ns; ++spin_source) { int copyfrom = spin_source - Ns/2;
-						LatticeFermion psi;
-						PropToFerm(q_sol, psi, color_source, copyfrom);
-						FermToProp(LatticeFermion(-psi), q_sol, color_source, spin_source);
-					}
-				}
-			}
-			break;
-
-			case QUARK_SPIN_TYPE_LOWER:
-			{
-				/* Since this is a non-relativistic prop 
-				 * negate the quark props 'lower' components
-				 * This is because I should have only done a half inversion 
-				 * on non relativistic channels, where the last two columns of the 
-				 * source MUST be the negation of the first two columns. 
-				 * Hence the last two columns of the solution must also be 
-				 * negations of the first two columns. The half inversion itself
-				 * has not put in the minus sign, it just copied the columns.
-				 * The post multiply by Gamma_5 adds in the required - sign 
-				 * in the last two columns 
-				 */ 
-				/* Apply Gamma_5 = Gamma(15) by negating the fermion extracted */
-				for(int color_source = 0; color_source < Nc ; ++color_source) {
-					for(int spin_source = 0; spin_source < Ns/2; ++spin_source) { 
-						int copyfrom = spin_source + Ns/2;
-						LatticeFermion psi;
-
-						PropToFerm(q_sol, psi, color_source, copyfrom);
-
-						// There is no need for (-) in the lower component case (KNO)
-						FermToProp(LatticeFermion(psi), q_sol, color_source, spin_source);
-					}
-				}
-			}
-			break;
-    }  // end switch(quarkSpinType)
 
     pop(xml_out);
     QDPIO::cout << "Exiting quarkProp4" << std::endl;
@@ -205,31 +109,67 @@ namespace Chroma
   }
 
 
-  typedef LatticeFermion LF;
-  typedef multi1d<LatticeColorMatrix> LCM;
 
-
-  //! Given a complete propagator as a source, this does all the inversions needed
-  /*! \ingroup qprop
-   *
-   * This routine is actually generic to all Wilson-like fermions
-   *
-   * \param q_sol    quark propagator ( Write )
-   * \param q_src    source ( Read )
-   * \param invParam inverter parameters ( Read )
-   * \param ncg_had  number of CG iterations ( Write )
-   */
-  void quarkProp4_4q(LatticePropagator& q_sol, 
-		  XMLWriter& xml_out,
-		  const LatticePropagator& q_src,
-		  Handle< SystemSolver<LF> > qprop,
-		  QuarkSpinType quarkSpinType,
-		  int& ncg_had)
+  template<typename T>
+  void quarkProp4_a(LatticePropagator& q_sol, 
+		    XMLWriter& xml_out,
+		    const LatticePropagator& q_src,
+		    Handle< SystemSolver<T> > qprop,
+		    QuarkSpinType quarkSpinType,
+		    int& ncg_had, bool fourq)
   {
-    quarkProp4_4q_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
+    START_CODE();
+
+    QDPIO::cout << "Entering new double quarkProp4 4q - MRHS interface" << std::endl;
+    push(xml_out, "QuarkProp4");
+
+    ncg_had = 0;
+		{ 
+			Double norm_chi;
+			Double fact;
+			LatticePropagator  chi;
+			LatticePropagator  psi = zero;
+    
+            // Normalize temporary         
+            norm_chi = sqrt(norm2(q_src));
+            fact = toDouble(1)/norm_chi;
+            chi *= fact;
+        
+            SystemSolverResults_t results = (*qprop)(psi, chi);
+			// Accumulate ncg_had and restore solution into solution prop	
+			ncg_had = 0;
+
+            // Undo rescale by multiplying by 1/fact = norm_chi[idx]
+            psi *= norm_chi; 
+
+            // Accumulate ncg_had. This will be correct if we follow
+            // the convention that true mrhs solvers return only a count
+            // in results[0].n_count and keep all others as zero
+            // Fake MRHS solvers (which loop over sources) can fill out 
+            // an accurate iteration count for each solve. 
+            ncg_had += results.n_count;
+            push(xml_out,"Qprop");
+            write(xml_out, "color_source", 0);
+            write(xml_out, "spin_source", 0);
+            write(xml_out, "n_count", results.n_count);
+            write(xml_out, "resid", results.resid);
+            pop(xml_out);
+
+		} // psis, chis etc go away here. 
+
+    pop(xml_out);
+    QDPIO::cout << "Exiting quarkProp4" << std::endl;
+
+    END_CODE();
   }
 
 
+
+  typedef LatticePropagator LP;
+  typedef LatticeFermion LF;
+  typedef multi1d<LatticeColorMatrix> LCM;
+  template<>
+
   //! Given a complete propagator as a source, this does all the inversions needed
   /*! \ingroup qprop
    *
@@ -240,10 +180,67 @@ namespace Chroma
    * \param invParam inverter parameters ( Read )
    * \param ncg_had  number of CG iterations ( Write )
    */
+#if 0 //FOURQ_SOLVE
+  void quarkProp4(LatticePropagator& q_sol,
+          XMLWriter& xml_out,
+          const LatticePropagator& q_src,
+          Handle< SystemSolver<LatticePropagator> > qprop,
+          QuarkSpinType quarkSpinType,
+          int& ncg_had)
+  {
+    quarkProp4_a<LatticePropagator>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had, true);
+  }
+#endif
+#if 0
+  void quarkProp4(LatticePropagator& q_sol,
+          XMLWriter& xml_out,
+          const LatticePropagator& q_src,
+          Handle< SystemSolver<LF> > qprop,
+          QuarkSpinType quarkSpinType,
+          int& ncg_had)
+  {
+    quarkProp4_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
+  }
+#endif
+
+  //! Given a complete propagator as a source, this does all the inversions needed
+  /*! \ingroup qprop
+   *
+   * This routine is actually generic to all Wilson-like fermions
+   *
+   * \param q_sol    quark propagator ( Write )
+   * \param q_src    source ( Read )
+   * \param invParam inverter parameters ( Read )
+   * \param ncg_had  number of CG iterations ( Write )
+   */
+#if 1
   template<>
-  void 
-  WilsonTypeFermAct<LF,LCM,LCM>::quarkProp_4q(
-    LatticePropagator& q_sol, 
+  void
+  WilsonTypeFermAct4Q<LatticePropagator,LCM,LCM>::quarkProp(
+    LatticePropagator& q_sol,
+    XMLWriter& xml_out,
+    const LatticePropagator& q_src,
+    Handle< FermState<LatticePropagator,LCM,LCM> > state,
+    const GroupXML_t& invParam,
+    QuarkSpinType quarkSpinType,
+    int& ncg_had) const
+  {
+    QDPIO::cout << "In double quarkProp_4q()" << std::endl;
+    StopWatch swatch;
+    swatch.start();
+    Handle< SystemSolver<LatticePropagator> > qprop(this->qprop(state,invParam));
+    swatch.stop();
+    QDPIO::cout << "Creating qprop took " << swatch.getTimeInSeconds() 
+		<< "sec " << std::endl;
+    quarkProp4_a<LatticePropagator>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had,true);
+  }
+#endif
+
+#if 0
+  template<>
+  void
+  WilsonTypeFermAct<LF,LCM,LCM>::quarkProp(
+    LatticePropagator& q_sol,
     XMLWriter& xml_out,
     const LatticePropagator& q_src,
     Handle< FermState<LF,LCM,LCM> > state,
@@ -251,17 +248,16 @@ namespace Chroma
     QuarkSpinType quarkSpinType,
     int& ncg_had) const
   {
-    QDPIO::cout << "In this quarkProp_4q()" << std::endl;
+    QDPIO::cout << "In quarkProp_4q()" << std::endl;
     StopWatch swatch;
     swatch.start();
     Handle< SystemSolver<LF> > qprop(this->qprop(state,invParam));
     swatch.stop();
-    QDPIO::cout << "Creating qprop took " << swatch.getTimeInSeconds() 
-		<< "sec " << std::endl;
-    quarkProp4_4q_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
+    QDPIO::cout << "Creating qprop took " << swatch.getTimeInSeconds()
+        << "sec " << std::endl;
+    quarkProp4_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
   }
-
-
+#endif
 
   //! Given a complete propagator as a source, this does all the inversions needed
   /*! \ingroup qprop
@@ -273,9 +269,27 @@ namespace Chroma
    * \param invParam inverter parameters ( Read )
    * \param ncg_had  number of CG iterations ( Write )
    */
+#if 0
+  template<>
+  void
+  WilsonTypeFermAct5D4Q<LatticePropagator,LCM,LCM>::quarkProp(
+    LatticePropagator& q_sol,
+    XMLWriter& xml_out,
+    const LatticePropagator& q_src,
+    Handle< FermState<LatticePropagator,LCM,LCM> > state,
+    const GroupXML_t& invParam,
+    QuarkSpinType quarkSpinType,
+    int& ncg_had) const
+  {
+    Handle< SystemSolver<LatticePropagator> > qprop(this->qprop(state,invParam));
+    quarkProp4_a<LatticePropagator>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had, true);
+  }
+
+#endif
+/*
   template<>
   void 
-  WilsonTypeFermAct5D<LF,LCM,LCM>::quarkProp_4q(
+  WilsonTypeFermAct5D<LF,LCM,LCM>::quarkProp(
     LatticePropagator& q_sol, 
     XMLWriter& xml_out,
     const LatticePropagator& q_src,
@@ -285,7 +299,249 @@ namespace Chroma
     int& ncg_had) const
   {
     Handle< SystemSolver<LF> > qprop(this->qprop(state,invParam));
-    quarkProp4_4q_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
+    quarkProp4_a<LF>(q_sol, xml_out, q_src, qprop, quarkSpinType, ncg_had);
+  }
+*/
+
+
+  //------------------------------------------------------------------------------------
+
+  // Return a linear operator solver for this action to solve M*psi=chi 
+  /*! \ingroup qprop */
+
+  template<>
+  LinOpSystemSolver<LP>*
+  WilsonTypeFermAct4Q<LP,LCM,LCM>::invLinOp(Handle< FermState<LP,LCM,LCM> > state,
+					  const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+	
+    return TheLinOpFerm4QSystemSolverFactory::Instance().createObject(invParam.id,
+								    paramtop,
+								    invParam.path,
+								    state,
+								    this->linOp(state));
+  }
+
+  //! Return a linear operator solver for this action to solve MdagM*psi=chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMSystemSolver<LP>*
+  WilsonTypeFermAct4Q<LP,LCM,LCM>::invMdagM(Handle< FermState<LP,LCM,LCM> > state,
+					  const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QSystemSolverFactory::Instance().createObject(invParam.id,
+								    paramtop,
+								    invParam.path,
+								    state,
+								    this->linOp(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve (M+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  LinOpMultiSystemSolver<LP>*
+  WilsonTypeFermAct4Q<LP,LCM,LCM>::mInvLinOp(Handle< FermState<LP,LCM,LCM> > state,
+					   const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheLinOpFerm4QMultiSystemSolverFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 this->linOp(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolver<LP>*
+  WilsonTypeFermAct4Q<LP,LCM,LCM>::mInvMdagM(Handle< FermState<LP,LCM,LCM> > state,
+					   const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QMultiSystemSolverFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 state,
+									 this->linOp(state));
+  }
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolverAccumulate<LP>*
+  WilsonTypeFermAct4Q<LP,LCM,LCM>::mInvMdagMAcc(Handle< FermState<LP,LCM,LCM> > state,
+					   const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QMultiSystemSolverAccumulateFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 this->linOp(state));
+  }
+
+
+
+  //------------------------------------------------------------------------------------
+
+  // Return a linear operator solver for this action to solve M*psi=chi 
+  /*! \ingroup qprop */
+  template<>
+  LinOpSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::invLinOp(Handle< FermState<LP,LCM,LCM> > state,
+					    const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+	
+    return TheLinOpFerm4QSystemSolverArrayFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 state,
+									 this->linOp(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve MdagM*psi=chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::invMdagM(Handle< FermState<LP,LCM,LCM> > state,
+					    const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QSystemSolverArrayFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 state,
+									 this->linOp(state));
+  }
+
+
+
+  // Return a linear operator solver for this action to solve M*psi=chi 
+  /*! \ingroup qprop */
+  template<>
+  LinOpSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::invLinOpPV(Handle< FermState<LP,LCM,LCM> > state,
+					      const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+	
+    return TheLinOpFerm4QSystemSolverArrayFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 state,
+									 this->linOpPV(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve PV^dag*PV*psi=chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::invMdagMPV(Handle< FermState<LP,LCM,LCM> > state,
+					      const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QSystemSolverArrayFactory::Instance().createObject(invParam.id,
+									 paramtop,
+									 invParam.path,
+									 state,
+									 this->linOpPV(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::mInvMdagM(Handle< FermState<LP,LCM,LCM> > state,
+					     const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QMultiSystemSolverArrayFactory::Instance().createObject(invParam.id,
+									      paramtop,
+									      invParam.path,
+									      state,
+									      lMdagM(state));
+  }
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolverAccumulateArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::mInvMdagMAcc(Handle< FermState<LP,LCM,LCM> > state,
+					     const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    return TheMdagMFerm4QMultiSystemSolverAccumulateArrayFactory::Instance().createObject(invParam.id,
+									      paramtop,
+									      invParam.path,
+									      lMdagM(state));
+  }
+
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolverArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::mInvMdagMPV(Handle< FermState<LP,LCM,LCM> > state,
+					       const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    Handle< LinearOperatorArray<LP> > PV(this->linOpPV(state));
+    Handle< LinearOperatorArray<LP> > MdagM(new MdagMLinOpArray<LP>(PV));
+
+    return TheMdagMFerm4QMultiSystemSolverArrayFactory::Instance().createObject(
+      invParam.id,
+      paramtop,
+      invParam.path,
+      state,
+      MdagM);
+  }
+
+  //! Return a linear operator solver for this action to solve (MdagM+shift_i)*psi_i = chi 
+  /*! \ingroup qprop */
+  template<>
+  MdagMMultiSystemSolverAccumulateArray<LP>*
+  WilsonTypeFermAct5D4Q<LP,LCM,LCM>::mInvMdagMPVAcc(Handle< FermState<LP,LCM,LCM> > state,
+					       const GroupXML_t& invParam) const
+  {
+    std::istringstream  xml(invParam.xml);
+    XMLReader  paramtop(xml);
+
+    Handle< LinearOperatorArray<LP> > PV(this->linOpPV(state));
+    Handle< LinearOperatorArray<LP> > MdagM(new MdagMLinOpArray<LP>(PV));
+
+    return TheMdagMFerm4QMultiSystemSolverAccumulateArrayFactory::Instance().createObject(
+      invParam.id,
+      paramtop,
+      invParam.path,
+      MdagM);
   }
 
 

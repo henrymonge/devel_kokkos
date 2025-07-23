@@ -95,7 +95,6 @@ namespace Chroma
 	return res;
       }
 
-
   private:
     // Hide default constructor
     LinOpSysSolverCG() {}

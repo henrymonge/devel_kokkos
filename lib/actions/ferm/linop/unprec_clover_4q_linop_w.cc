@@ -37,11 +37,11 @@ namespace Chroma
    * \param psi 	  Pseudofermion field          (Read)
    * \param isign   Flag ( PLUS | MINUS )   	       (Read)
    */
-  void UnprecClover4QLinOp::operator()(LatticeFermion & chi, 
-				     const LatticeFermion& psi, 
+  void UnprecClover4QLinOp::operator()(LatticePropagator & chi, 
+				     const LatticePropagator& psi, 
 				     enum PlusMinus isign) const
   {
-    LatticeFermion tmp; moveToFastMemoryHint(tmp);
+    LatticePropagator tmp; moveToFastMemoryHint(tmp);
     Real mhalf = -0.5;
 
     //  chi   =  A . psi - 0.5 * D' . psi  */
@@ -55,7 +55,7 @@ namespace Chroma
 
   void 
   UnprecClover4QLinOp::deriv(multi1d<LatticeColorMatrix>& ds_u,
-			   const LatticeFermion& chi, const LatticeFermion& psi, 
+			   const LatticePropagator& chi, const LatticePropagator& psi, 
 			   enum PlusMinus isign) const
   {
     // A. deriv will resize

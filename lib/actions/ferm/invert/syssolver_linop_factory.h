@@ -23,6 +23,9 @@ namespace Chroma
     typedef Handle< FermState< LatticeFermionF, multi1d<LatticeColorMatrixF>, multi1d<LatticeColorMatrixF> > > FSHandleF;
 
     typedef Handle< FermState< LatticeFermionD, multi1d<LatticeColorMatrixD>, multi1d<LatticeColorMatrixD> > > FSHandleD;
+
+    typedef Handle< FermState< LatticePropagator, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > FSHandle4Q;
+
   }
   //! LinOp system solver factory (foundry)
   /*! @ingroup invert */
@@ -37,6 +40,19 @@ namespace Chroma
 							 Handle< LinearOperator<LatticeFermion> >), 
 		  StringFactoryError> >
   TheLinOpFermSystemSolverFactory;
+
+  typedef Chroma::SingletonHolder<
+    ObjectFactory<LinOpSystemSolver<LatticePropagator>,
+          std::string,
+          TYPELIST_4(XMLReader&, const std::string&, FSHandle4Q,  Handle< LinearOperator<LatticePropagator> >),
+          LinOpSystemSolver<LatticePropagator>* (*)(XMLReader&,
+                             const std::string&,
+
+                             FSHandle4Q,
+                             Handle< LinearOperator<LatticePropagator> >),
+          StringFactoryError> >
+  TheLinOpFerm4QSystemSolverFactory;
+
 
   typedef Chroma::SingletonHolder< 
     ObjectFactory<LinOpSystemSolver<LatticeFermionF>, 
@@ -77,6 +93,19 @@ namespace Chroma
   TheLinOpFermSystemSolverArrayFactory;
 
 
+  //! LinOp system solver factory (foundry)
+  /*! @ingroup invert */
+  typedef Chroma::SingletonHolder< 
+    ObjectFactory<LinOpSystemSolverArray<LatticePropagator>,
+          std::string,
+          TYPELIST_4(XMLReader&, const std::string&, FSHandle4Q, Handle< LinearOperatorArray<LatticePropagator> >),
+          LinOpSystemSolverArray<LatticePropagator>* (*)(XMLReader&,
+                                  const std::string&,
+                                  FSHandle4Q,
+                                  Handle< LinearOperatorArray<LatticePropagator> >),
+          StringFactoryError> >
+  TheLinOpFerm4QSystemSolverArrayFactory;
+
 
   //! LinOp system solver factory (foundry)
   /*! @ingroup invert */
@@ -105,6 +134,18 @@ namespace Chroma
 		  StringFactoryError> >
   TheLinOpFermProjectorFactory;
 
+  //! Projector factory (foundry)
+  /*! @ingroup projector */
+  typedef SingletonHolder<
+    ObjectFactory<Projector<LatticePropagator>,
+          std::string,
+          TYPELIST_4(XMLReader&, const std::string&, FSHandle4Q,  Handle< LinearOperator<LatticePropagator> >),
+          Projector<LatticePropagator>* (*)(XMLReader&,
+                             const std::string&,
+                             FSHandle4Q,
+                             Handle< LinearOperator<LatticePropagator> >),
+          StringFactoryError> >
+  TheLinOpFerm4QProjectorFactory;
 
 }
 

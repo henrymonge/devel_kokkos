@@ -6,11 +6,15 @@
 #include "actions/ferm/fermacts/fermact_factory_w.h"
 
 #include "actions/ferm/linop/unprec_clover_4q_linop_w.h"
+//#include "actions/ferm/linop/unprec_clover_linop_w.h"
+
 #include "actions/ferm/fermacts/unprec_clover_4q_fermact_w.h"
 #include "actions/ferm/invert/syssolver_linop_factory.h"
 
 //#include "actions/ferm/fermacts/fermact_factory_w.h"
-#include "actions/ferm/fermstates/ferm_createstate_reader_w.h"
+//#include "actions/ferm/fermstates/ferm_createstate_reader_w.h"
+#include "actions/ferm/fermstates/ferm_createstate_reader_4q_w.h"
+
 
 namespace Chroma
 {
@@ -19,9 +23,9 @@ namespace Chroma
   namespace UnprecClover4QFermActEnv
   {
     //! Callback function
-    WilsonTypeFermAct<LatticeFermion,
+    WilsonTypeFermAct4Q<LatticePropagator,
 		      multi1d<LatticeColorMatrix>,
-		      multi1d<LatticeColorMatrix> >* createFermAct4D(XMLReader& xml_in,
+		      multi1d<LatticeColorMatrix> >* createFermAct4D4Q(XMLReader& xml_in,
 								     const std::string& path)
     {
       return new UnprecClover4QFermAct(CreateFermStateEnv::reader(xml_in, path), 
@@ -30,12 +34,12 @@ namespace Chroma
 
     //! Callback function
     /*! Differs in return type */
-    FermionAction<LatticeFermion,
+    FermionAction<LatticePropagator,
 		  multi1d<LatticeColorMatrix>,
 		  multi1d<LatticeColorMatrix> >* createFermAct(XMLReader& xml_in,
 							       const std::string& path)
     {
-      return createFermAct4D(xml_in, path);
+      return createFermAct4D4Q(xml_in, path);
     }
 
     //! Name to be used
@@ -50,8 +54,8 @@ namespace Chroma
       bool success = true; 
       if (! registered)
       {
-	success &= Chroma::TheFermionActionFactory::Instance().registerObject(name, createFermAct);
-	success &= Chroma::TheWilsonTypeFermActFactory::Instance().registerObject(name, createFermAct4D);
+	success &= Chroma::TheFermionAction4QFactory::Instance().registerObject(name, createFermAct);
+	success &= Chroma::TheWilsonTypeFermAct4QFactory::Instance().registerObject(name, createFermAct4D4Q);
 	registered = true;
       }
       return success;
@@ -65,24 +69,26 @@ namespace Chroma
    *
    * \param state	    gauge field     	       (Read)
    */
-  UnprecLinearOperator<LatticeFermion,
+  UnprecLinearOperator<LatticePropagator,
 		       multi1d<LatticeColorMatrix>,
 		       multi1d<LatticeColorMatrix> >* 
   UnprecClover4QFermAct::linOp(Handle< FermState<T,P,Q> > state) const
   {
     return new UnprecClover4QLinOp(state,param);
+    //return new UnprecCloverLinOp(state,param);
+
   }
 
 
   //! Return a linear operator solver for this action to solve M*psi=chi 
-  Projector<LatticeFermion>* 
+  Projector<LatticePropagator>* 
   UnprecClover4QFermAct::projector(Handle< FermState<T,P,Q> > state,
 				     const GroupXML_t& projParam) const
   {
     std::istringstream  is(projParam.xml);
     XMLReader  paramtop(is);
 	
-    return TheLinOpFermProjectorFactory::Instance().createObject(projParam.id,
+    return TheLinOpFerm4QProjectorFactory::Instance().createObject(projParam.id,
 								    paramtop,
 								    projParam.path,
 								    state,

@@ -101,6 +101,11 @@ namespace Chroma
     virtual SystemSolver<T>* qprop(Handle< FermState<T,P,Q> > state,
 				   const GroupXML_t& invParam) const = 0;
 
+/*
+    //! Return quark prop solver, solution of unpreconditioned system
+    virtual SystemSolver<LatticePropagator>* qprop(Handle< FermState<LatticePropagator,P,Q> > state,
+                   const GroupXML_t& invParam) const = 0;
+*/
     //! Return a projector onto the unpreconditioned system
     virtual Projector<T>* projector(Handle< FermState<T,P,Q> > state,
 				   const GroupXML_t& invParam) const
@@ -163,6 +168,8 @@ namespace Chroma
      * \param quarkSpinType compute only a non-relativistic prop ( Read )
      * \param ncg_had       number of solver iterations ( Write )
      */
+
+#if 0
    virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
 			   XMLWriter& xml_out,
 			   const typename PropTypeTraits<T>::Type_t& q_src,
@@ -187,6 +194,7 @@ namespace Chroma
      * \param obsvP         compute currents and residual mass ( Read )
      * \param ncg_had       number of solver iterations ( Write )
      */
+
      virtual void quarkProp_4q(typename PropTypeTraits<T>::Type_t& q_sol,
 			   XMLWriter& xml_out,
 			   const typename PropTypeTraits<T>::Type_t& q_src,
@@ -200,7 +208,7 @@ namespace Chroma
 	quarkProp_4q(q_sol, xml_out, q_src, state, invParam, quarkSpinType, ncg_had);
       }
 
-
+#endif
 
   };
 

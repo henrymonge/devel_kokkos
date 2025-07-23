@@ -116,6 +116,15 @@ namespace Chroma
       return new ProjectorRandom<LatticeFermion>(A);
     }
 
+/*
+    Projector<LatticePropagator>* createProjector4Q(
+      XMLReader&, const std::string&,
+      Handle<FermState<LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix>>>,
+      Handle<LinearOperator<LatticeFermion>> A)
+    {
+      return new ProjectorRandom<LatticePropagator>(A);
+    }
+*/
     //! Register the projector
     inline bool registerAll() {
       static bool registered = false;

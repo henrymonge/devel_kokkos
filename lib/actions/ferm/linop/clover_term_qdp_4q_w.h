@@ -7,9 +7,10 @@
 #define __clover_term_qdp_4q_w_h__
 
 #include "state.h"
+#include "util/ferm/transf.h"
 #include "qdp_allocator.h"
 #include "actions/ferm/fermacts/clover_fermact_params_w.h"
-#include "actions/ferm/linop/clover_term_base_w.h"
+#include "actions/ferm/linop/clover_term_base_4q_w.h"
 #include "meas/glue/mesfield.h"
 #include <complex>
 namespace Chroma 
@@ -1054,7 +1055,7 @@ namespace Chroma
    * \param cb      Checkerboard of OUTPUT std::vector               (Read) 
    */
   template<typename T, typename U>
-  void QDP4QCloverTermT<T,U>::applySite(T& chi, const T& psi, 
+  void QDP4QCloverTermT<T,U>::applySite(T& chi_in, const T& psi_in, 
 			    enum PlusMinus isign, int site) const
   {
 #ifndef QDP_IS_QDPJIT
@@ -1067,6 +1068,13 @@ namespace Chroma
     }
 
     int n = 2*Nc;
+
+    LatticeFermion psi;
+    PropToFerm(psi_in, psi, 0, 0);
+
+
+    LatticeFermion chi;
+    PropToFerm(chi_in, chi, 0, 0);
 
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* ppsi = (const RComplex<REALT>*)&(psi.elem(site).elem(0).elem(0));
@@ -1572,8 +1580,19 @@ namespace Chroma
 
       typedef typename WordType<T>::Type_t REALT;
       // Unwrap the args...
-      T& chi=arg->chi;
-      const T& psi=arg->psi;
+      //T& chi=arg->chi;
+      //const T& psi=arg->psi;
+
+      LatticeFermion psi;
+      PropToFerm(arg->psi, psi, 0, 0);
+
+
+      LatticeFermion chi;
+      PropToFerm(arg->chi, chi, 0, 0);
+
+
+
+
       const PrimitiveClovTriang<REALT>* tri = arg->tri;
       int cb = arg->cb;
       
@@ -2272,9 +2291,9 @@ namespace Chroma
 
 
 
-  typedef QDP4QCloverTermT<LatticeFermion, LatticeColorMatrix> QDP4QCloverTerm;
-  typedef QDP4QCloverTermT<LatticeFermionF, LatticeColorMatrixF> QDP4QCloverTermF;
-  typedef QDP4QCloverTermT<LatticeFermionD, LatticeColorMatrixD> QDP4QCloverTermD;
+  typedef QDP4QCloverTermT<LatticePropagator, LatticeColorMatrix> QDP4QCloverTerm;
+  typedef QDP4QCloverTermT<LatticePropagatorF, LatticeColorMatrixF> QDP4QCloverTermF;
+  typedef QDP4QCloverTermT<LatticePropagatorD, LatticeColorMatrixD> QDP4QCloverTermD;
 } // End Namespace Chroma
 
 
