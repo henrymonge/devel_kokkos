@@ -2066,6 +2066,29 @@ if( Chroma_ENABLE_SUPERBBLAS )
 endif()
 
 
+
+########################################################
+#  2 Quark solves
+########################################################
+if( Chroma_ENABLE_2QUARK_SOLVE ) 
+    list(APPEND ChromaLIB_HEADERS 
+        wilstype_fermact_2qblock_w.h
+        actions/ferm/fermacts/fermact_factory_2qblock_w.h
+        actions/ferm/invert/multi_syssolver_linop_2qblock_factory.h
+        actions/ferm/invert/multi_syssolver_mdagm_2qblock_factory.h
+        actions/ferm/invert/multi_syssolver_mdagm_accumulate_2qblock_factory.h
+        actions/ferm/invert/syssolver_linop_2qblock_factory.h
+        actions/ferm/invert/syssolver_mdagm_2qblock_factory.h
+)
+
+
+target_sources(chromalib PRIVATE 
+	#meas/inline/io/inline_erase_quda_multigrid_space.cc
+)
+endif()
+
+
+
 if( Chroma_SANITIZER_OPTS )
    target_compile_options(chromalib PRIVATE ${Chroma_SANITIZER_OPTS})
    target_link_options(chromalib PUBLIC ${Chroma_SANITIZER_OPTS})
