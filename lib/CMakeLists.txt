@@ -11,7 +11,9 @@ if( Chroma_ENABLE_CPP_WILSON_DSLASH)
    target_link_libraries(chromalib PUBLIC CPPWilsonDslash::dslash)
 endif()
 
-
+if( Chroma_ENABLE_2QUARK_SOLVE )
+    set(ENABLE_2QUARK_SOLVE "1")
+endif()
 set(ChromaLIB_HEADERS
     chroma_config.h
     chroma.h
@@ -2071,19 +2073,38 @@ endif()
 #  2 Quark solves
 ########################################################
 if( Chroma_ENABLE_2QUARK_SOLVE ) 
+
+#set(ENABLE_2QUARK_SOLVE "1")
+
     list(APPEND ChromaLIB_HEADERS 
         wilstype_fermact_2qblock_w.h
+        unprec_wilstype_fermact_2qblock_w.h
         actions/ferm/fermacts/fermact_factory_2qblock_w.h
         actions/ferm/invert/multi_syssolver_linop_2qblock_factory.h
         actions/ferm/invert/multi_syssolver_mdagm_2qblock_factory.h
         actions/ferm/invert/multi_syssolver_mdagm_accumulate_2qblock_factory.h
         actions/ferm/invert/syssolver_linop_2qblock_factory.h
         actions/ferm/invert/syssolver_mdagm_2qblock_factory.h
+        actions/ferm/fermacts/unprec_clover_fermact_2qblock_w.h
+        actions/ferm/linop/unprec_clover_2qblock_linop_w.h
+        actions/ferm/fermstates/ferm_createstate_reader_2qblock_w.h 
+        actions/ferm/linop/dslash_2qblock_w.h
+        actions/ferm/linop/lwldslash_2qblock_w.h
+        actions/ferm/linop/lwldslash_base_2qblock_w.h
+        actions/ferm/invert/projector_null_2qblock.h
+        actions/ferm/linop/clover_term_2qblock_w.h
+        actions/ferm/linop/clover_term_base_2qblock_w.h
+        actions/ferm/linop/clover_term_qdp_2qblock_w.h
+        actions/ferm/qprop/quarkprop4_2qblock_w.h
 )
 
 
 target_sources(chromalib PRIVATE 
 	#meas/inline/io/inline_erase_quda_multigrid_space.cc
+    actions/ferm/fermacts/unprec_clover_fermact_2qblock_w.cc
+    actions/ferm/linop/unprec_clover_2qblock_linop_w.cc
+    actions/ferm/linop/clover_term_qdp_2qblock_w.cc
+    actions/ferm/qprop/quarkprop4_2qblock_w.cc
 )
 endif()
 

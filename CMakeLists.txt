@@ -231,6 +231,15 @@ if( Chroma_ENABLE_SUPERBBLAS )
 endif()
 
 
+
+###########################
+# 7th: Deal with 2quark solves
+###########################
+if( Chroma_ENABLE_2QUARK_SOLVE )
+    set(ENABLE_2QUARK_SOLVE "1")
+endif()
+
+
 #####################################
 # Configure chroma_config_internal.h
 #####################################

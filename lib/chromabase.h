@@ -33,6 +33,14 @@ struct PropTypeTraits<LatticeDiracFermion>
   typedef LatticeDiracPropagator   Type_t;
 };
 
+//#if ENABLE_2QUARK_SOLVE //
+template<>
+struct PropTypeTraits<LatticePropagator>
+{
+  typedef LatticeDiracPropagator   Type_t;
+};
+//#endif
+
 #if defined (QDP_IS_QDPJIT2)
 template<>
 struct PropTypeTraits<LatticeFermion>

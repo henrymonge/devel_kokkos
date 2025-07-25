@@ -21,6 +21,12 @@
 #include "actions/ferm/invert/projector_random.h"
 #include "actions/ferm/invert/projector_null.h"
 
+#if ENABLE_2QUARK_SOLVE 
+#include "actions/ferm/invert/projector_null_2qblock.h"
+#endif
+
+
+
 
 #include "chroma_config.h"
 #ifdef BUILD_QUDA
@@ -88,6 +94,11 @@ namespace Chroma
 	success &= LinOpSysSolverFGMRESDREnv::registerAll();
 	success &= ProjectorRandomEnv::registerAll();
 	success &= ProjectorNullEnv::registerAll();
+
+#if ENABLE_2QUARK_SOLVE
+    success &= ProjectorNull2QBEnv::registerAll();
+#endif
+
 
 #ifdef BUILD_QUDA
 	success &= LinOpSysSolverQUDACloverEnv::registerAll();
