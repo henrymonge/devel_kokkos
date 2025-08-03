@@ -99,6 +99,25 @@ namespace Chroma
 	 const Real& RsdCG, 
 	 int MaxCG);
 
+//#if ENABLE_2QUARK_SOLVE //
+
+  // Single precision
+  SystemSolverResults_t
+  InvCG2(const LinearOperator<LatticePropagatorF>& M,
+     const LatticePropagatorF& chi,
+     LatticePropagatorF& psi,
+     const Real& RsdCG,
+     int MaxCG);
+
+  // Double precision
+  SystemSolverResults_t
+  InvCG2(const LinearOperator<LatticePropagatorD>& M,
+     const LatticePropagatorD& chi,
+     LatticePropagatorD& psi,
+     const Real& RsdCG,
+     int MaxCG);
+
+//#endif
   /*! @} */  // end of group invert
 
 }  // end namespace Chroma

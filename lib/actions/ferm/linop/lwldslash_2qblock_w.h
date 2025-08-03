@@ -289,6 +289,9 @@ namespace Chroma
     LatticeFermion chi;
     PropToFerm(chi_in, chi, 0, 0);
 
+    QDPIO::cout << "Calling apply_D" << std::endl;
+
+
     switch (isign)
     {
     case PLUS:

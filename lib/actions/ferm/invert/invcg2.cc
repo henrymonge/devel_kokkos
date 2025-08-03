@@ -100,7 +100,7 @@ namespace Chroma
     Double chi_sq =  norm2(chi_internal,s);
     flopcount.addSiteFlops(4*Nc*Ns,s);
 
-#if 0
+#if 1
     QDPIO::cout << "chi_norm = " << sqrt(chi_sq) << std::endl;
 #endif
 
@@ -269,6 +269,47 @@ namespace Chroma
     ierr= PAT_region_end(21);
 #endif
   }
+
+
+//#if ENABLE_2QUARK_SOLVE //
+
+  // Single precision
+  SystemSolverResults_t
+  InvCG2(const LinearOperator<LatticePropagatorF>& M,
+     const LatticePropagatorF& chi,
+     LatticePropagatorF& psi,
+     const Real& RsdCG,
+     int MaxCG)
+  {
+#ifdef PAT
+    int ierr = PAT_region_begin(20, "InvCG2Single");
+#endif
+    return InvCG2_a<LatticePropagatorF,RealF>(M, chi, psi, RsdCG, MaxCG);
+#ifdef PAT
+    ierr = PAT_region_end(20);
+#endif
+
+  }
+
+
+  // Double precision
+  SystemSolverResults_t
+  InvCG2(const LinearOperator<LatticePropagator>& M,
+     const LatticePropagator& chi,
+     LatticePropagator& psi,
+     const Real& RsdCG,
+     int MaxCG)
+  {
+#ifdef PAT
+    int ierr=PAT_region_begin(21, "InvCG2Double");
+#endif
+    return InvCG2_a<LatticePropagator, RealD>(M, chi, psi, RsdCG, MaxCG);
+#ifdef PAT
+    ierr= PAT_region_end(21);
+#endif
+  }
+
+//#endif
 
   // Single precision
   SystemSolverResults_t 

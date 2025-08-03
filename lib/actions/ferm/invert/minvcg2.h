@@ -40,6 +40,25 @@ namespace Chroma
 	      int MaxCG,
 	      int &n_count);
 
+
+  void MInvCG2(const LinearOperator<LatticePropagatorF>& M,
+          const LatticePropagatorF& chi,
+          multi1d<LatticePropagatorF>& psi,
+          const multi1d<RealF>& shifts,
+          const multi1d<RealF>& RsdCG,
+          int MaxCG,
+          int &n_count);
+
+
+  void MInvCG2(const LinearOperator<LatticePropagator>& M,
+          const LatticePropagator& chi,
+          multi1d<LatticePropagator>& psi,
+          const multi1d<RealD>& shifts,
+          const multi1d<RealD>& RsdCG,
+          int MaxCG,
+          int &n_count);
+
+
   /*! \ingroup invert */
   template<typename T, typename P, typename Q>
   void MInvCG2(const DiffLinearOperator<T,P,Q>& M,

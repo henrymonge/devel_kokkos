@@ -409,6 +409,50 @@ namespace Chroma
   }
 
 
+//#if ENABLE_2QUARK_SOLVE //
+  /*! \ingroup invert */
+
+  void MInvCG2(const LinearOperator<LatticePropagatorF>& M,
+          const LatticePropagatorF& chi,
+          multi1d<LatticePropagatorF>& psi,
+          const multi1d<RealF>& shifts,
+          const multi1d<RealF>& RsdCG,
+          int MaxCG,
+          int &n_count)
+  {
+#ifdef PAT
+    int ierr=PAT_region_begin(22, "MInvCG2LinOp");
+#endif
+    MInvCG2_a(M, chi, psi, shifts, RsdCG, MaxCG, n_count);
+#ifdef PAT
+    ierr=PAT_region_end(22);
+#endif
+  }
+
+  /*! \ingroup invert */
+  void MInvCG2(const LinearOperator<LatticePropagator>& M,
+          const LatticePropagator& chi,
+          multi1d<LatticePropagator>& psi,
+          const multi1d<RealD>& shifts,
+          const multi1d<RealD>& RsdCG,
+          int MaxCG,
+          int &n_count)
+  {
+#ifdef PAT
+    int ierr=PAT_region_begin(22, "MInvCG2LinOp");
+#endif
+    MInvCG2_a(M, chi, psi, shifts, RsdCG, MaxCG, n_count);
+#ifdef PAT
+    ierr=PAT_region_end(22);
+#endif
+  }
+
+
+//#endif
+
+
+
+
   /*! \ingroup invert */
 
   void MInvCG2(const DiffLinearOperator<LatticeFermionF,

@@ -2096,6 +2096,7 @@ if( Chroma_ENABLE_2QUARK_SOLVE )
         actions/ferm/linop/clover_term_base_2qblock_w.h
         actions/ferm/linop/clover_term_qdp_2qblock_w.h
         actions/ferm/qprop/quarkprop4_2qblock_w.h
+        meas/inline/hadron/inline_propagators_2qblock_w.h
 )
 
 
@@ -2105,6 +2106,7 @@ target_sources(chromalib PRIVATE
     actions/ferm/linop/unprec_clover_2qblock_linop_w.cc
     actions/ferm/linop/clover_term_qdp_2qblock_w.cc
     actions/ferm/qprop/quarkprop4_2qblock_w.cc
+    meas/inline/hadron/inline_propagators_2qblock_w.cc
 )
 endif()
 

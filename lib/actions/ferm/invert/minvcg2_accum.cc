@@ -383,6 +383,26 @@ namespace Chroma
   }
 
 
+//#if ENABLE_2QUARK_SOLVE //
+
+  /*! \ingroup invert */
+  template<>
+  void MInvCG2Accum(const LinearOperator<LatticePropagator>& M,
+            const LatticePropagator& chi,
+            LatticePropagator& psi,
+            const Real& norm,
+            const multi1d<Real>& residues,
+            const multi1d<Real>& poles,
+            const Real& RsdCG,
+           int MaxCG,
+           int& n_count)
+  {
+    MInvCG2Accum_a(M, chi, psi, norm, residues, poles, RsdCG, MaxCG, n_count);
+  }
+//#endif
+
+
+
   /*! \ingroup invert */
   template<>
   void MInvCG2Accum(const DiffLinearOperator<LatticeFermion,

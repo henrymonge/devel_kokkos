@@ -31,6 +31,12 @@
 #include "meas/inline/hadron/inline_make_source_w.h"
 #include "meas/inline/hadron/inline_make_source_ferm_w.h"
 #include "meas/inline/hadron/inline_propagator_w.h"
+
+
+//#if ENABLE_2QUARK_SOLVE //
+#include "meas/inline/hadron/inline_propagators_2qblock_w.h"
+//#endif
+
 #include "meas/inline/hadron/inline_propagator_ferm_w.h"
 #include "meas/inline/hadron/inline_multi_propagator_w.h"
 #include "meas/inline/hadron/inline_seqsource_w.h"
@@ -125,6 +131,10 @@ namespace Chroma
 
 	success &= InlineMakeSourceEnv::registerAll();
 	success &= InlinePropagatorEnv::registerAll();
+
+//#if ENABLE_2QUARK_SOLVE //
+    success &= InlinePropagators2QBlockEnv::registerAll();
+//#endif
 
 	success &= InlineMakeSourceFermEnv::registerAll();
 	success &= InlinePropagatorFermEnv::registerAll();

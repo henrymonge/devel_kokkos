@@ -141,6 +141,8 @@ namespace Chroma
     QDPIO::cout << "Using the SystemSolver<LatticePropagator>" <<std::endl;
     return new FermActQprop<T>(linOp(state),
                    invLinOp(state,invParam));
+
+    QDPIO::cout << "Using the SystemSolver<LatticePropagator>2" <<std::endl;
   }
 //#endif
 

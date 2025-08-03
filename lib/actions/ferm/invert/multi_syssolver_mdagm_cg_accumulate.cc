@@ -4,7 +4,7 @@
 
 #include "actions/ferm/invert/multi_syssolver_mdagm_accumulate_factory.h"
 #include "actions/ferm/invert/multi_syssolver_mdagm_accumulate_aggregate.h"
-
+#include "actions/ferm/invert/multi_syssolver_mdagm_accumulate_2qblock_factory.h"
 #include "actions/ferm/invert/multi_syssolver_mdagm_cg_accumulate.h"
 
 namespace Chroma
@@ -22,6 +22,20 @@ namespace Chroma
       return new MdagMMultiSysSolverCGAccumulate<LatticeFermion>(A, SysSolverCGParams(xml_in, path));
     }
 
+//#if ENABLE_2QUARK_SOLVE //
+
+
+    MdagMMultiSystemSolverAccumulate<LatticePropagator>* createFerm(XMLReader& xml_in,
+                               const std::string& path,
+                               Handle< LinearOperator<LatticePropagator> > A)
+    {
+      return new MdagMMultiSysSolverCGAccumulate<LatticePropagator>(A, SysSolverCGParams(xml_in, path));
+    }
+
+
+//#endif
+
+
     //! Name to be used
     const std::string name("CG_INVERTER");
 
@@ -35,6 +49,14 @@ namespace Chroma
       if (! registered)
       {
 	success &= Chroma::TheMdagMFermMultiSystemSolverAccumulateFactory::Instance().registerObject(name, createFerm);
+
+//#if ENABLE_2QUARK_SOLVE //
+
+    //success &= Chroma::TheMdagMFerm2QBMultiSystemSolverAccumulateFactory::Instance().registerObject(name, createFerm);
+
+//#endif
+
+
 	registered = true;
       }
       return success;
