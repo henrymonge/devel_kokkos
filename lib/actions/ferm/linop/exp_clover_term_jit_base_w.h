@@ -7,9 +7,7 @@
 #define __exp_clover_term_qdp_w_h__
 
 #include "actions/ferm/fermacts/clover_fermact_params_w.h"
-
-#include "actions/ferm/linop/clov_triang_qdp_w.h"
-
+#include "actions/ferm/linop/clov_triang_jit_w.h"
 #include "actions/ferm/linop/exp_clover_term_base_w.h"
 #include "meas/glue/mesfield.h"
 #include "qdp_allocator.h"

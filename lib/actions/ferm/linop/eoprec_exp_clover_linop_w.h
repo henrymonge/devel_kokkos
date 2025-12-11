@@ -13,6 +13,7 @@
 #include "actions/ferm/linop/dslash_w.h"
 #include "actions/ferm/linop/exp_clover_term_w.h"
 
+#if ! defined(BUILD_JIT_CLOVER_TERM)
 
 namespace Chroma 
 { 
@@ -137,5 +138,6 @@ namespace Chroma
 
 } // End Namespace Chroma
 
+#endif
 
 #endif

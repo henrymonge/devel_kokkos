@@ -102,10 +102,15 @@ namespace Chroma
 	success &= UnprecParWilsonFermActEnv::registerAll();
 
 	success &= EvenOddPrecCloverFermActEnv::registerAll();
-    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
 	success &= SymEvenOddPrecCloverFermActEnv::registerAll();
 	success &= UnprecCloverFermActEnv::registerAll();
+
+#if ! defined(BUILD_JIT_CLOVER_TERM)
+    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
+#endif
     success &= UnprecExpCloverFermActEnv::registerAll();
+
+
 	success &= EvenOddPrecCloverOrbifoldFermActEnv::registerAll();
 	success &= EvenOddPrecSLICFermActEnv::registerAll();
 	success &= EvenOddPrecSLRCFermActEnv::registerAll();

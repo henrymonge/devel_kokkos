@@ -9,10 +9,25 @@
 #include "chroma_config.h"
 #include "qdp_config.h"
 
-#include "actions/ferm/linop/exp_clover_term_qdp_w.h"
-
 // The QDP naive clover term
 //
+#if defined(BUILD_JIT_CLOVER_TERM)
+#include "actions/ferm/linop/exp_clover_term_jit_w.h"
+
+namespace Chroma
+{
+
+
+  using ExpCloverTerm = JITExpCloverTerm;
+  using ExpCloverTermF = JITExpCloverTermF;
+  using ExpCloverTermD = JITExpCloverTermD;
+
+  template<typename T,typename U>
+  using ExpCloverTermT = JITExpCloverTermT<T,U>;
+
+}
+#else
+#include "actions/ferm/linop/exp_clover_term_qdp_w.h"
 namespace Chroma
 {
 
@@ -24,5 +39,6 @@ namespace Chroma
   using ExpCloverTermT = QDPExpCloverTermT<T,U>;
 
 }
+#endif
 
 #endif

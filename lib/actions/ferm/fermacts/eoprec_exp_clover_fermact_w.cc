@@ -12,6 +12,8 @@
 //#include "actions/ferm/fermacts/fermact_factory_w.h"
 #include "actions/ferm/fermstates/ferm_createstate_reader_w.h"
 
+#if ! defined(BUILD_JIT_CLOVER_TERM)
+
 namespace Chroma
 {
 
@@ -89,3 +91,4 @@ namespace Chroma
 
 }
 
+#endif

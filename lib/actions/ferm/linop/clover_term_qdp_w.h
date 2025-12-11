@@ -7,7 +7,11 @@
 #define __clover_term_qdp_w_h__
 
 #include "actions/ferm/fermacts/clover_fermact_params_w.h"
-#include "actions/ferm/linop/clov_triang_qdp_w.h"
+
+//#if ! defined(BUILD_JIT_CLOVER_TERM)
+//#include "actions/ferm/linop/clov_triang_qdp_w.h"
+//#endif
+
 #include "actions/ferm/linop/clover_term_base_w.h"
 #include "meas/glue/mesfield.h"
 #include "qdp_allocator.h"
@@ -15,6 +19,22 @@
 #include <complex>
 namespace Chroma
 {
+  //! Special structure used for triangular objects
+  template<typename R>
+  struct PrimitiveClovTriang
+  {
+    RScalar<R>   diag[2][2*Nc];
+    RComplex<R>  offd[2][2*Nc*Nc-Nc];
+  };
+
+  template<typename R>
+  struct QUDAPackedClovSite {
+    R diag1[6];
+    R offDiag1[15][2];
+    R diag2[6];
+    R offDiag2[15][2];
+  };
+
 
   // Reader/writers
   /*! \ingroup linop */

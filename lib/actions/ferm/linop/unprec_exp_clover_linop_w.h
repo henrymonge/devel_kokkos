@@ -10,6 +10,7 @@
 #include "actions/ferm/linop/exp_clover_term_w.h"
 #include "linearop.h"
 
+
 namespace Chroma
 {
   //! Unpreconditioned Clover-Dirac operator
@@ -73,3 +74,5 @@ namespace Chroma
 } // End Namespace Chroma
 
 #endif
+
+

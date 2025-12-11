@@ -7,6 +7,7 @@
 
 using namespace QDP::Hints;
 
+
 namespace Chroma
 {
   //! Creation routine with Anisotropy
@@ -83,3 +84,5 @@ namespace Chroma
   }
 
 } // End Namespace Chroma
+
+

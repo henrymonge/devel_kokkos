@@ -1,12 +1,11 @@
-#ifndef __clov_triang_qdp_w_h__
-#define __clov_triang_qdp_w_h__
+#ifndef __clov_triang_jit_w_h__
+#define __clov_triang_jit_w_h__
 
 #include <chromabase.h>
 
 namespace Chroma
 {
 
-#if ! defined(BUILD_JIT_CLOVER_TERM)
   //! Special structure used for triangular objects
   template <typename R>
   struct PrimitiveClovTriang {
@@ -14,6 +13,7 @@ namespace Chroma
     RComplex<R> offd[2][2 * Nc * Nc - Nc];
   };
 
+#if 0
   template <typename R>
   struct QUDAPackedClovSite {
     R diag1[6];

@@ -4,7 +4,7 @@
 
 #include "actions/ferm/linop/eoprec_exp_clover_linop_w.h"
 
-
+#if ! defined(BUILD_JIT_CLOVER_TERM)
 
 namespace Chroma 
 { 
@@ -367,3 +367,6 @@ namespace Chroma
 
   }
 } // End Namespace Chroma
+
+
+#endif
