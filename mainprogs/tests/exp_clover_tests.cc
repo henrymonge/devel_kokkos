@@ -37,14 +37,14 @@ public:
   {
     u.resize(Nd);
 
-    /*
+    
     for (int mu = 0; mu < Nd; ++mu)
     {
       gaussian(u[mu]);
       reunit(u[mu]);
       // u[mu] = 1;
     }
-    */
+
 
     multi1d<int> bcs(4);
     bcs[0] = bcs[1] = bcs[2] = 1;
