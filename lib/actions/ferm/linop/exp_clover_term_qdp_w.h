@@ -734,6 +734,8 @@ namespace Chroma
     //! PACK UP the Clover term for QUDA library:
     void packForQUDA(multi1d<QUDAPackedClovSite<REALT>>& quda_pack, int cb, int inv) const;
     void tracePowers();
+    ExpClovTriang<REALT>* tri;
+    LatticeDouble tr_M; // Fill this out during create
 
   protected:
     //! Create the clover term on cb
@@ -766,9 +768,9 @@ namespace Chroma
     Handle<FermBC<T, multi1d<U>, multi1d<U>>> fbc;
     multi1d<U> u;
     CloverFermActParams param;
-    LatticeDouble tr_M; // Fill this out during create
+    //LatticeDouble tr_M; // Fill this out during create
 
-    ExpClovTriang<REALT>* tri;
+    //ExpClovTriang<REALT>* tri;
     ExpClovTriang<REALT>* exp_tri;
   };
 
@@ -842,7 +844,7 @@ namespace Chroma
 	  tri[site].A.diag[block][d] = from.tri[site].A.diag[block][d];
 
 	  // Inline accumulate the trace
-	  tr_M.elem(site).elem().elem() -= fabs(tri[site].A.diag[block][d]); //check this
+	  tr_M.elem(site).elem().elem() += fabs(tri[site].A.diag[block][d]); //check this
 	}
     
 	for (int od = 0; od < 15; ++od)
@@ -1227,7 +1229,6 @@ namespace Chroma
   Double QDPExpCloverTermT<T, U, N_exp>::cholesDet(int cb) const
   {
 #ifndef QDP_IS_QDPJIT
-    QDPIO::cout << "tr_M = " << tr_M.elem(10).elem().elem() << std::endl;
     return sum(tr_M, rb[cb]);
 #else
     assert(!"ni");
@@ -1309,8 +1310,8 @@ namespace Chroma
     for(int i=0;i<=5;i++){
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(f_chi, chi, isign,cb,i,j);
-            (*this).applyPower(ppsi, psi, PLUS, cb, j);
-            (*this).applyPower(cchi, f_chi, PLUS, cb,i);
+            (*this).applyPower(ppsi, psi, isign, cb, j);
+            (*this).applyPower(cchi, f_chi, isign, cb,i);
 
             //CloverTermBase<T,U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
             ExpCloverTermBase<T, U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
@@ -1371,11 +1372,11 @@ namespace Chroma
         sum_psi= zero;
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+            (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
             sum_psi+=ppsi;
         }
 
-        (*this).applyPower(cchi, chi, PLUS, cb,i);
+        (*this).applyPower(cchi, chi, isign, cb,i);
         //CloverTermBase<T,U>::deriv(ds_u_tmp,cchi,sum_psi,isign,cb);
         ExpCloverTermBase<T,U>::deriv(ds_u_tmp,cchi,sum_psi,isign,cb);
 
@@ -1442,11 +1443,11 @@ namespace Chroma
 
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+            (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
             sum_psi_vec[i]+=ppsi;
         }
 
-        (*this).applyPower(cchi_vec[i], chi, PLUS, cb,i);
+        (*this).applyPower(cchi_vec[i], chi, isign, cb,i);
 
     }
 
@@ -1533,8 +1534,8 @@ namespace Chroma
         for(int j=0;j<=5;j++){
             for(int k=0;k<chi.size();k++){
                 (*this).applyCoeff(f_chi[k], psi[k], isign,cb,i,j);
-                (*this).applyPower(ppsi[k], psi[k], PLUS, cb, j);
-                (*this).applyPower(cchi[k], f_chi[k], PLUS, cb,i);
+                (*this).applyPower(ppsi[k], psi[k], isign, cb, j);
+                (*this).applyPower(cchi[k], f_chi[k], isign, cb,i);
             }
             //CloverTermBase<T,U>::derivMultipole(ds_u_tmp,cchi,ppsi,isign,cb);
             ExpCloverTermBase<T,U>::derivMultipole(ds_u_tmp,cchi,ppsi,isign,cb);
@@ -1601,11 +1602,11 @@ namespace Chroma
 
             for(int j=0;j<=5;j++){
                 (*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
-                (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+                (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
                 sum_psi_vec[nterm]+=ppsi;
             }
 
-            (*this).applyPower(cchi_vec[nterm], chi[k], PLUS, cb,i);
+            (*this).applyPower(cchi_vec[nterm], chi[k],isign, cb,i);
             nterm+=1;
         }
     }
@@ -1919,18 +1920,13 @@ namespace Chroma
 
 	// Compute the q-s for the block
 	REALT tab[2][N_exp + 1][6] = {0};
-	REALT itab[2][N_exp + 1][6] = {0};
 
 	for (int block = 0; block < 2; ++block)
 	{
 	  constexpr int upper = N_exp + 1 < 6 ? N_exp + 1 : 6;
-	  REALT ifact = 1;
 	  for (int i = 0; i < upper; ++i)
-	  {
 	    tab[block][i][i] = (REALT)1;
-	    itab[block][i][i] = ifact;
-	    ifact = -ifact;
-	  }
+	
 	}
 
 	Traces<REALT, 0> tr0(tri[site]);

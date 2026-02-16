@@ -6,7 +6,7 @@
 namespace Chroma
 {
 
-#if ! defined(BUILD_JIT_CLOVER_TERM)
+//#if ! defined(BUILD_JIT_CLOVER_TERM)
   //! Special structure used for triangular objects
   template <typename R>
   struct PrimitiveClovTriang {
@@ -21,7 +21,7 @@ namespace Chroma
     R diag2[6];
     R offDiag2[15][2];
   };
-#endif
+//#endif
 
 }
 

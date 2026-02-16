@@ -298,6 +298,7 @@ namespace Chroma
 
       const EOFermActT<Phi,P,Q>& FA = getFermAct();
 
+      QDPIO::cout << "This is the one\n";
       Handle< FermState<Phi,P,Q> > state = FA.createState(s.getQ());
 
       // Get system solver
@@ -321,7 +322,7 @@ namespace Chroma
 
       // Action
       Double action = innerProductReal(getPhi(), X, M->subset());
-      
+     
       write(xml_out, "n_count", res.n_count);
       write(xml_out, "S_oo", action);
       pop(xml_out);
@@ -441,6 +442,7 @@ namespace Chroma
       Handle< EOLinOpT<Phi,P,Q> > M(FA.linOp(state));
       
       Double S_ee =(Double(-2)*M->logDetEvenEvenLinOp());
+    
       XMLWriter& xml_out = TheXMLLogWriter::Instance();
       push(xml_out, "S_even_even");
       write(xml_out, "S_ee", S_ee);
@@ -463,6 +465,7 @@ namespace Chroma
 
       Double S_oo = this->S_odd_odd(s);
 
+      QDPIO::cout << "S_ee = " << S_ee << " S_oo= " <<S_oo<<"\n"; 
       Double action = S_ee + S_oo;
 
       write(xml_out, "S", action);

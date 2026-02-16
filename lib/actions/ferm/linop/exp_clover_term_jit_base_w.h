@@ -1307,8 +1307,8 @@ namespace Chroma
     for(int i=0;i<=5;i++){
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(f_chi, chi, isign,cb,i,j);
-            (*this).applyPower(ppsi, psi, PLUS, cb, j);
-            (*this).applyPower(cchi, f_chi, PLUS, cb,i);
+            (*this).applyPower(ppsi, psi,isign, cb, j);
+            (*this).applyPower(cchi, f_chi, isign, cb,i);
 
             //CloverTermBase<T,U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
             ExpCloverTermBase<T, U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
@@ -1369,11 +1369,11 @@ namespace Chroma
         sum_psi= zero;
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+            (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
             sum_psi+=ppsi;
         }
 
-        (*this).applyPower(cchi, chi, PLUS, cb,i);
+        (*this).applyPower(cchi, chi, isign, cb,i);
         //CloverTermBase<T,U>::deriv(ds_u_tmp,cchi,sum_psi,isign,cb);
         ExpCloverTermBase<T,U>::deriv(ds_u_tmp,cchi,sum_psi,isign,cb);
 
@@ -1440,11 +1440,11 @@ namespace Chroma
 
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+            (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
             sum_psi_vec[i]+=ppsi;
         }
 
-        (*this).applyPower(cchi_vec[i], chi, PLUS, cb,i);
+        (*this).applyPower(cchi_vec[i], chi,isign, cb,i);
 
     }
 
@@ -1531,8 +1531,8 @@ namespace Chroma
         for(int j=0;j<=5;j++){
             for(int k=0;k<chi.size();k++){
                 (*this).applyCoeff(f_chi[k], psi[k], isign,cb,i,j);
-                (*this).applyPower(ppsi[k], psi[k], PLUS, cb, j);
-                (*this).applyPower(cchi[k], f_chi[k], PLUS, cb,i);
+                (*this).applyPower(ppsi[k], psi[k], isign, cb, j);
+                (*this).applyPower(cchi[k], f_chi[k], isign, cb,i);
             }
             //CloverTermBase<T,U>::derivMultipole(ds_u_tmp,cchi,ppsi,isign,cb);
             ExpCloverTermBase<T,U>::derivMultipole(ds_u_tmp,cchi,ppsi,isign,cb);
@@ -1599,11 +1599,11 @@ namespace Chroma
 
             for(int j=0;j<=5;j++){
                 (*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
-                (*this).applyPower(ppsi, tmp_psi, PLUS, cb, j);
+                (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
                 sum_psi_vec[nterm]+=ppsi;
             }
 
-            (*this).applyPower(cchi_vec[nterm], chi[k], PLUS, cb,i);
+            (*this).applyPower(cchi_vec[nterm], chi[k], isign, cb,i);
             nterm+=1;
         }
     }

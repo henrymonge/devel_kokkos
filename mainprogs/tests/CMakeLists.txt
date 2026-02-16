@@ -113,10 +113,15 @@ add_library(GTest ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/gtest/gtest-all.cc)
 target_include_directories(GTest PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set_target_properties(GTest PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF)
 
+
+#if (QDP_IS_QDPJIT) #(NOT QDP_IS_QDPJIT)
 add_executable(t_exp_clover
-  t_exp_clover.cc
-  chroma_gtest_env.h 
-  exp_clover_tests.cc)
+t_exp_clover.cc
+chroma_gtest_env.h 
+exp_clover_tests.cc)
+#endif()
+
+
 
 add_executable(t_symm_prec 
 	t_symm_prec.cc 
@@ -139,8 +144,11 @@ endif()
 target_link_libraries( t_symm_prec PUBLIC Chroma::chromalib GTest)
 target_include_directories(t_symm_prec PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+#if (QDP_IS_QDPJIT) #(NOT QDP_IS_QDPJIT)
+set_target_properties( t_exp_clover PROPERTIES CXX_STANDARD 20 )
 target_link_libraries( t_exp_clover PUBLIC Chroma::chromalib GTest)
 target_include_directories(t_exp_clover PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#endif()
 
 if ( Chroma_ENABLE_LAPACK )
 add_executable(t_inv_fgmres_dr 

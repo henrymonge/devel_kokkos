@@ -106,8 +106,11 @@ namespace Chroma
 	success &= UnprecCloverFermActEnv::registerAll();
 
 #if ! defined(BUILD_JIT_CLOVER_TERM)
-    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
+    //success &= EvenOddPrecExpCloverFermActEnv::registerAll();
+    //success &= UnprecExpCloverFermActEnv::registerAll();
+
 #endif
+    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
     success &= UnprecExpCloverFermActEnv::registerAll();
 
 

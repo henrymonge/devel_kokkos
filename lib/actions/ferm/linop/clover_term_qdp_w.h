@@ -11,7 +11,7 @@
 //#if ! defined(BUILD_JIT_CLOVER_TERM)
 //#include "actions/ferm/linop/clov_triang_qdp_w.h"
 //#endif
-
+#include "actions/ferm/linop/clov_triang_qdp_w.h"
 #include "actions/ferm/linop/clover_term_base_w.h"
 #include "meas/glue/mesfield.h"
 #include "qdp_allocator.h"
@@ -19,6 +19,8 @@
 #include <complex>
 namespace Chroma
 {
+
+  /*
   //! Special structure used for triangular objects
   template<typename R>
   struct PrimitiveClovTriang
@@ -34,7 +36,7 @@ namespace Chroma
     R diag2[6];
     R offDiag2[15][2];
   };
-
+*/
 
   // Reader/writers
   /*! \ingroup linop */

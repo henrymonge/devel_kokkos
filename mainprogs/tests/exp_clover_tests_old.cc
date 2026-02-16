@@ -1,28 +1,23 @@
 #include "chromabase.h"
-#include "chroma.h"
 #include "handle.h"
 #include <cmath>
-#include <fstream>
-#include <iostream>
 
 #include "util/gauge/reunit.h"
 #include "gtest/gtest.h"
 
 #include "actions/ferm/fermacts/clover_fermact_params_w.h"
 #include "actions/ferm/fermstates/simple_fermstate.h"
-//#include "actions/ferm/linop/clover_term_qdp_w.h"
-//#include "actions/ferm/linop/exp_clover_term_qdp_w.h"
+#include "actions/ferm/linop/clover_term_qdp_w.h"
+#include "actions/ferm/linop/exp_clover_term_qdp_w.h"
 #include "actions/ferm/linop/unprec_clover_linop_w.h"
 #include "actions/ferm/linop/unprec_exp_clover_linop_w.h"
-#include "actions/ferm/linop/eoprec_exp_clover_linop_w.h"
 
 // QUDA Headers
-//#include <quda.h>
+#include <quda.h>
 // #include <util_quda.h>
 
 using namespace Chroma;
 using namespace QDP;
-
 
 template <typename TestType>
 class ExpCloverFixtureT : public TestType
@@ -32,20 +27,15 @@ public:
   using Q = multi1d<LatticeColorMatrix>;
   using P = multi1d<LatticeColorMatrix>;
 
-
   void SetUp()
   {
     u.resize(Nd);
-
-    /*
     for (int mu = 0; mu < Nd; ++mu)
     {
       gaussian(u[mu]);
       reunit(u[mu]);
       // u[mu] = 1;
     }
-    */
-
     multi1d<int> bcs(4);
     bcs[0] = bcs[1] = bcs[2] = 1;
     bcs[3] = -1;
@@ -64,17 +54,10 @@ public:
 
     clov.create(simpleFermState, p);
     eclov.create(simpleFermState, p);
-    //inv_eclov.create(simpleFermState, p);
-    //invclov.create(simpleFermState, p);
-
-
-#ifndef QDP_IS_QDPJIT
     inv_eclov.create(simpleFermState, p);
-    inv_eclov.choles(0);
-#else
-    inv_eclov.createInv(simpleFermState,p,eclov);  // make a copy
-    inv_eclov.choles(0);
-#endif
+    invclov.create(simpleFermState, p);
+
+  }
 
   static constexpr double Mass = 0.1;
 
@@ -83,21 +66,17 @@ public:
   }
 
   Q u;
-  LatticePropagator quark_propagator_jit;
-  LatticePropagator quark_propagator_qdpxx;
 
   Handle<FermState<T, P, Q>> simpleFermState;
-  CloverTerm clov;
-  ExpCloverTerm eclov;
-  ExpCloverTerm inv_eclov; 
-  ExpCloverTerm invclovCopy;
-  CloverTerm invclov;
+  QDPCloverTerm clov;
+  QDPExpCloverTerm<> eclov;
+  QDPExpCloverTerm<> inv_eclov; 
+  QDPCloverTerm invclov;
 };
 
 class ExpClovFixture : public ExpCloverFixtureT<::testing::Test>
 {
 };
-
 
 TEST_F(ExpClovFixture, CheckOp)
 {
@@ -115,7 +94,7 @@ TEST_F(ExpClovFixture, CheckOp)
   for (int cb = 0; cb < 2; ++cb)
   {
     clov.apply(res, src, PLUS, cb);
-    eclov.applyPower(dummy, src, PLUS, cb, 1);
+    eclov.applyUnexp(dummy, src, PLUS, cb);
     res_exp[rb[cb]] = src + dummy;
     res_exp[rb[cb]] *= Real(Nd + Mass);
 
@@ -160,40 +139,12 @@ TEST_F(ExpClovFixture, CheckRefOp)
   ASSERT_LT(abs(ref - r13), 1.0e-15);
 }
 
-
-TEST_F(ExpClovFixture, CheckApplyClover)
-{
-  LatticeFermion src, res, res2, res_exp, diff;
-  gaussian(src);
-  res = zero;
-  res2 = zero;
- 
-  // A^0 = I
-  for (int cb = 0; cb < 2; ++cb)
-  {
-
-    clov.apply(res, src, PLUS, cb);
-    eclov.applyPower(res2, src, PLUS, cb, 1);
-    res_exp[rb[cb]] = src + res2;
-    res_exp[rb[cb]] *= Real(Nd + Mass);
-
-    diff[rb[cb]] = res_exp - res;
-
-
-    Double normdiff = sqrt(norm2(diff, rb[cb]) / norm2(src, rb[cb]));
-    QDPIO::cout << "Diff (" << cb << ") = " << normdiff << "\n";
-
-    ASSERT_LT(toDouble(normdiff), 1.0e-14);
-  }
-}
-
 TEST_F(ExpClovFixture, CheckApplyPower0)
 {
-  LatticeFermion src, res, res2, res_exp, diff;
+  LatticeFermion src, res, diff;
   gaussian(src);
   res = zero;
-  res2 = zero;
- 
+
   // A^0 = I
   for (int cb = 0; cb < 2; ++cb)
   {
@@ -201,14 +152,12 @@ TEST_F(ExpClovFixture, CheckApplyPower0)
     eclov.applyPower(res, src, PLUS, cb, 0);
 
     diff[rb[cb]] = res - src;
-
     Double normdiff = sqrt(norm2(diff, rb[cb]) / norm2(src, rb[cb]));
     QDPIO::cout << "Diff (" << cb << ") = " << normdiff << "\n";
 
     ASSERT_LT(toDouble(normdiff), 1.0e-14);
   }
 }
-
 
 TEST_F(ExpClovFixture, CheckApplyPower1)
 {
@@ -219,8 +168,7 @@ TEST_F(ExpClovFixture, CheckApplyPower1)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    //applyUnexp just wrapss applyPower(chi, psi, isign, cb, 1);
-    eclov.applyUnexp(res, src, PLUS, cb);  
+    eclov.applyUnexp(res, src, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 1);
 
     diff[rb[cb]] = res2 - res;
@@ -230,7 +178,6 @@ TEST_F(ExpClovFixture, CheckApplyPower1)
     ASSERT_LT(toDouble(normdiff), 1.0e-14);
   }
 }
- 
 
 TEST_F(ExpClovFixture, CheckApplyPower2)
 {
@@ -241,8 +188,8 @@ TEST_F(ExpClovFixture, CheckApplyPower2)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
+    eclov.applyUnexp(res, src, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
     eclov.applyPower(res, src, PLUS, cb, 2);
 
     diff[rb[cb]] = res2 - res;
@@ -262,10 +209,9 @@ TEST_F(ExpClovFixture, CheckApplyPower3)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-
+    eclov.applyUnexp(res, src, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 3);
 
     diff[rb[cb]] = res2 - res;
@@ -276,7 +222,6 @@ TEST_F(ExpClovFixture, CheckApplyPower3)
   }
 }
 
-
 TEST_F(ExpClovFixture, CheckApplyPower4)
 {
   LatticeFermion src, res, res2, diff;
@@ -286,11 +231,10 @@ TEST_F(ExpClovFixture, CheckApplyPower4)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-
+    eclov.applyUnexp(res, src, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
     eclov.applyPower(res, src, PLUS, cb, 4);
 
     diff[rb[cb]] = res2 - res;
@@ -310,12 +254,11 @@ TEST_F(ExpClovFixture, CheckApplyPower5)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-
+    eclov.applyUnexp(res, src, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 5);
 
     diff[rb[cb]] = res2 - res;
@@ -326,35 +269,6 @@ TEST_F(ExpClovFixture, CheckApplyPower5)
   }
 }
 
-TEST_F(ExpClovFixture, CheckApplyPower6)
-{
-  LatticeFermion src, res, res2, diff;
-  gaussian(src);
-  res = zero;
-  res2 = zero;
-
-  for (int cb = 0; cb < 2; ++cb)
-  {
-
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-
-    eclov.applyPower(res, src, PLUS, cb, 6);
-
-    diff[rb[cb]] = res2 - res;
-    Double normdiff = sqrt(norm2(diff, rb[cb]) / norm2(src, rb[cb]));
-    QDPIO::cout << "Diff (" << cb << ") = " << normdiff << "\n";
-
-    ASSERT_LT(toDouble(normdiff), 1.0e-14);
-  }
-}
-
-
-
 TEST_F(ExpClovFixture, CheckApplyPower7)
 {
   LatticeFermion src, res, res2, diff;
@@ -364,15 +278,13 @@ TEST_F(ExpClovFixture, CheckApplyPower7)
 
   for (int cb = 0; cb < 2; ++cb)
   {
-
-    eclov.applyPower(res, src, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-    eclov.applyPower(res2, res, PLUS, cb, 1);
-    eclov.applyPower(res, res2, PLUS, cb, 1);
-
+    eclov.applyUnexp(res, src, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
+    eclov.applyUnexp(res2, res, PLUS, cb);
+    eclov.applyUnexp(res, res2, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 7);
 
     diff[rb[cb]] = res2 - res;
@@ -382,17 +294,15 @@ TEST_F(ExpClovFixture, CheckApplyPower7)
     ASSERT_LT(toDouble(normdiff), 1.0e-14);
   }
 }
- 
 
 
-
-TEST_F(ExpClovFixture, CheckApplyInv)
+#if 0
+TEST_F(ExpClovFixture, CheckExp)
 {
-  LatticeFermion src, res, res2, dummy,diff;
+  LatticeFermion src, res, res2, dummy, diff;
   gaussian(src);
   res = zero;
   res2 = zero;
-  dummy=zero;
 
   // We will be going for an exponential in the end:
   //
@@ -400,20 +310,20 @@ TEST_F(ExpClovFixture, CheckApplyInv)
   //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
   //
   //  First test: (diag mass)[ 1 + E ] = regular clover term.
-
-
+  eclov.applyRef(res, src, PLUS, 28);
   for (int cb = 0; cb < 2; ++cb)
   {
-      eclov.apply(res, src, PLUS, cb);
-      eclov.applyInv(res2, res, PLUS, cb);
+    eclov.apply(res2, src, PLUS, cb);
   }
-  diff = res2-src;
+
+  diff = res2 - res;
   Double normdiff = sqrt(norm2(diff) / norm2(src));
   QDPIO::cout << "Diff  = " << normdiff << "\n";
 
   ASSERT_LT(toDouble(normdiff), 1.0e-14);
-
 }
+#endif
+
 
 TEST_F(ExpClovFixture, CheckApplyExpClov)
 {
@@ -534,3 +444,117 @@ TEST_F(ExpClovFixture, CheckApplyInvExpClov)
   }
 
 
+
+#if 0
+TEST_F(ExpClovFixture, CheckApplyQUDAExpClov)
+{
+  LatticeFermion src, res, res2, dummy, diff;
+  gaussian(src);
+  res = zero;
+  res2 = zero;
+
+  // We will be going for an exponential in the end:
+  //
+  // so:
+  //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
+  //
+  //  First test: (diag mass)[ 1 + E ] = regular clover term.
+
+  void *spinorIn =(void *)&(src.elem(rb[1].start()).elem(0).elem(0).real());
+  void* spinorOut =(void *)&(res.elem(rb[1].start()).elem(0).elem(0).real());
+
+  //cloverQuda(*spinorOut, *spinorIn, QudaInvertParam *inv_param, QudaParity parity, int inverse);
+
+
+  eclov.makeExpClov(PLUS,0,0);
+  eclov.makeExpClov(PLUS,1,0);
+
+  //eclov.printExpClov();
+
+  for (int cb = 0; cb < 2; ++cb)
+  {
+    eclov.apply(res2, src, PLUS, cb);
+    eclov.applyExpClov(res, src, PLUS, cb);
+  }
+
+  diff = res-res2;
+  Double normdiff = sqrt(norm2(diff) / norm2(src));
+  QDPIO::cout << "Diff  = " << normdiff << "\n";
+
+  ASSERT_LT(toDouble(normdiff), 1.0e-14);
+  }
+#endif
+
+
+#if 0
+
+TEST_F(ExpClovFixture, CheckExpInv)
+{
+  LatticeFermion src, res, res2, dummy, diff;
+  gaussian(src);
+  res = zero;
+  res2 = zero;
+
+  // We will be going for an exponential in the end:
+  //
+  // so:
+  //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
+  //
+  //  First test: (diag mass)[ 1 + E ] = regular clover term.
+  for (int cb = 0; cb < 2; ++cb)
+  {
+    eclov.apply(res, src, PLUS, cb);
+    eclov.applyInv(res2, res, PLUS, cb);
+  }
+
+  diff = res2 - src;
+  Double normdiff = sqrt(norm2(diff) / norm2(src));
+  QDPIO::cout << "Diff  = " << normdiff << "\n";
+
+  ASSERT_LT(toDouble(normdiff), 1.0e-14);
+}
+
+#endif
+
+TEST_F(ExpClovFixture, CheckUprecExpCloverLinopZeroClover)
+{
+  CloverFermActParams p_zero;
+  p_zero.Mass = 0.1;
+  p_zero.clovCoeffR = .0001;
+  p_zero.clovCoeffT = .0001;
+  p_zero.u0 = 1;
+  p_zero.anisoParam.anisoP = false;
+  p_zero.anisoParam.t_dir = 3;
+  p_zero.anisoParam.xi_0 = Real(1);
+  p_zero.twisted_m = 0;
+  p_zero.twisted_m_usedP = false;
+
+  UnprecCloverLinOp unexpM(simpleFermState, p_zero);
+  UnprecExpCloverLinOp expM(simpleFermState, p_zero);
+
+  LatticeFermion src, res, res2, dummy, diff;
+  gaussian(src);
+  res = zero;
+  res2 = zero;
+
+  unexpM(res, src, PLUS);
+  expM(res2, src, PLUS);
+
+  diff = res2 - res;
+  Double normdiff = sqrt(norm2(diff) / norm2(res));
+  QDPIO::cout << "Diff  = " << normdiff << "\n";
+
+  ASSERT_LT(toDouble(normdiff), 9.0e-11);
+
+  res = zero;
+  res2 = zero;
+
+  unexpM(res, src, MINUS);
+  expM(res2, src, MINUS);
+
+  diff = res2 - res;
+  normdiff = sqrt(norm2(diff) / norm2(res));
+  QDPIO::cout << "Diff  = " << normdiff << "\n";
+
+  ASSERT_LT(toDouble(normdiff), 9.0e-11);
+}

@@ -693,8 +693,8 @@ namespace Chroma
 			     const T& chi, const T& psi, 
 			     enum PlusMinus isign, int cb) const
   {
-    START_CODE();
 
+    START_CODE();
     //StopWatch swatch;
     //swatch.reset(); swatch.start();
 
@@ -708,7 +708,6 @@ namespace Chroma
 
     // Get the links
     //const multi1d<U>& u = getU();
-
 
     // Now compute the insertions
     for(int mu=0; mu < Nd; mu++) {
