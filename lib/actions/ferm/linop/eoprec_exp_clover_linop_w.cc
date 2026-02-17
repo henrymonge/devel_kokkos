@@ -33,13 +33,15 @@ namespace Chroma
     //makeExpClov(PLUS,1);
 
 #ifndef QDP_IS_QDPJIT 
-    invclov.create(fs,param,clov);  // make a copy
+    //invclov.create(fs,param,clov);  // make a copy
+    invclov.createInv(fs,param,clov);  // make a copy
 #else
     invclov.createInv(fs,param,clov);  // make a copy
+    //invclov.choles(0);
 #endif
 
+    //invclov.choles(0);
 
-    invclov.choles(0);  
 #ifndef QDP_IS_QDPJIT
     //invclov.choles(0);  // invert the cb=0 part
 #else
@@ -269,6 +271,12 @@ namespace Chroma
   {
     START_CODE();
 
+#if 1   //This term should be zero for exp-clover
+    if( ds_u.size() != Nd ) {
+      ds_u.resize(Nd);
+    }
+    ds_u = zero;
+#else 
     //invclov.derivTrLn(ds_u, isign, 0);
     // Testing Odd Odd Term - get nothing from even even term
     clov.derivTrLn(ds_u, isign, 0);
@@ -276,7 +284,7 @@ namespace Chroma
     {
       ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
     }
-        
+#endif
 
     END_CODE();
   }

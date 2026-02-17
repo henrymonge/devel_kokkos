@@ -19,7 +19,7 @@
 namespace QDP
 {
 
-  constexpr int N_exp_default = 17;// 17;
+  constexpr int N_exp_default = 17;
   template<typename T>
   struct Pq
   {
@@ -128,13 +128,12 @@ namespace QDP
                    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_in) : tri_dia_r(tri_dia_in),tri_off_r(tri_off_in)
       {
       }
-      //      inline BaseJIT<T>RComplex<T> operator()(int row, int col) const
+
       inline RComplexREG<WordREG<REALT> > operator()(int row, int col) const
       {
-	//RComplex<T> ret_val;
 
-    //QDPIO::cout << "row = " << row << " col= "<< col;
     RComplexREG<WordREG<REALT> > ret_val;    
+
 	if (row == col)
 	{
 	  // Diagonal Piece:
@@ -160,7 +159,6 @@ namespace QDP
 	if (row == col)
 	{
 	  // Diagonal piece -- must be real.
-	  //tri_dia_r[block][row] = RScalar<T>(real(value));
       tri_dia_r.elem(block).elem(row) = RScalarREG<WordREG<REALT> >(real(value));
 	}
 	else if (row > col)
@@ -175,12 +173,7 @@ namespace QDP
 	}
       }
 
-    //private:
-      // A reference to the triangular storage
-    //  PrimitiveClovTriang<T>& tri;
-    public: //FIX THIS FIX THIS FIX THIS
-      //PrimitiveClovTriang<T>& tri;
-
+    private:
        typename REGType< typename XJIT::Subtype_t >::Type_t  tri_dia_r;
        typename REGType< typename YJIT::Subtype_t >::Type_t  tri_off_r;
 
@@ -194,7 +187,6 @@ namespace QDP
        typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
        typedef typename WordType<T>::Type_t REALT;
 
-      //Traces(ExpClovTriang<T>& E_) : E(E_)
       Traces(typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_in,
                    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_in) : tri_dia_r(tri_dia_in),tri_off_r(tri_off_in)
 
@@ -240,12 +232,10 @@ namespace QDP
 	}
       }
 
-//      inline void traces(RScalarREG<WordREG<REALT> >&  tr)
       inline void traces(Pq<RComplexREG<WordREG<REALT>>>& tr)
       {
 
 	// The first 5 will map onto the hither powers.
-	//ClovAccessor<T, block> A(E.A);
     ClovAccessor<REALT,X,Y,block> A(tri_dia_r,tri_off_r);
 
     zero_rep(tr.q[0]);
@@ -330,6 +320,11 @@ namespace Chroma
     void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
 		const CloverFermActParams& param_);
 
+
+    virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
+            const CloverFermActParams& param_,
+            const JITExpCloverTermT<T,U>& from_, int inv_op);
+
     virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
 			const CloverFermActParams& param_,
 			const JITExpCloverTermT<T,U>& from_);
@@ -342,7 +337,9 @@ namespace Chroma
     /*!
      * \param cb   checkerboard of work (Read)
      */
-    void choles(int cb);
+    void choles(int cb){
+      QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
+    };
 
     //! Computes the inverse of the term on cb using Cholesky
     /*!
@@ -399,7 +396,6 @@ namespace Chroma
            const T& chi, const T& psi,
            enum PlusMinus isign, int cb) const;
 
-#if 1
     //! Take deriv of D
     /*!
      * \param chi     left vectors                           (Read)
@@ -426,7 +422,7 @@ namespace Chroma
     void derivMultipole(multi1d<U>& ds_u,
             const multi1d<T>& chi, const multi1d<T>& psi,
             enum PlusMinus isign, int cb) const;
-#endif
+
     //! Calculates Tr_D ( Gamma_mat L )
     void triacntr(U& B, int mat, int cb) const;
 
@@ -438,12 +434,6 @@ namespace Chroma
 
     int getDiaId() const { return tri_dia.getId(); }
     int getOffId() const { return tri_off.getId(); }
-    OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc;
-    OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv;
-    OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
-    LatticeDouble tr_M; // Fill this out during create;
-    multi3d<LatticeDouble> C_arr; // Fill this out during create;
-
 
   protected:
     //! Create the clover term on cb
@@ -452,10 +442,6 @@ namespace Chroma
      *  \param cb        checkerboard                          (Read)
      */
     void makeClov(const multi1d<U>& f, const RealT& diag_mass);
-
-    //! Invert the clover term on cb
-    //void chlclovms(LatticeREAL& log_diag, int cb);
-    void ldagdlinv(LatticeREAL& tr_log_diag, int cb);
 
     //! Get the u field
     const multi1d<U>& getU() const {return u;}
@@ -469,15 +455,17 @@ namespace Chroma
     multi1d<U>  u;
     CloverFermActParams          param;
     LatticeREAL                  tr_log_diag_; // Fill this out during create
-    //LatticeDouble tr_M; // Fill this out during create
+    LatticeDouble tr_M; // Fill this out during create
 
     // but save the global sum until needed.
 
     OLattice<PComp<PTriDia<RScalar <WORD<REALT> > > > >  tri_dia;
     OLattice<PComp<PTriOff<RComplex<WORD<REALT> > > > >  tri_off;    
-    //OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc;
-    //OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv; 
-    //OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
+    OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc;
+    OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv; 
+    OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
+    multi3d<LatticeDouble> C_arr; // Fill this out during create;
+
   };
 
 #undef WORD
@@ -739,14 +727,12 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
 				   const CloverFermActParams& param_,
-				   const JITExpCloverTermT<T,U>& from)
+				   const JITExpCloverTermT<T,U>& from, int inv_op)
   {
     START_CODE();
 
-    //std::cout << "PTX Clover create from other "  << (void*)this << "\n";
-
     u.resize(Nd);
-    
+
     u = fs->getLinks();
     fbc = fs->getFermBC();
     param = param_;
@@ -783,84 +769,38 @@ namespace Chroma
     tr_log_diag_ = from.tr_log_diag_;
    
     tr_M = from.tr_M;
- 
+
     tri_dia = from.tri_dia;
     tri_off = from.tri_off;
     C=from.C;
-    qc = from.qc;
-    qc_inv = from.qc_inv;
+    if(inv_op == 1){
+        qc = from.qc_inv;
+        qc_inv = from.qc;
+    }
+    else{
+        qc = from.qc;
+        qc_inv = from.qc_inv;
+    }
 
     END_CODE();  
   }
 
+  template<typename T, typename U,int N_exp>
+  void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
+                   const CloverFermActParams& param_,
+                   const JITExpCloverTermT<T,U>& from)
+  {
+     create(fs,param_,from,0);
+  }
 
-  // Now copy
+
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::createInv(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
-				   const CloverFermActParams& param_,
-				   const JITExpCloverTermT<T,U>& from)
+                   const CloverFermActParams& param_,
+                   const JITExpCloverTermT<T,U>& from)
   {
-    START_CODE();
-
-    //std::cout << "PTX Clover create from other "  << (void*)this << "\n";
-
-    u.resize(Nd);
-
-    u = fs->getLinks();
-    fbc = fs->getFermBC();
-    param = param_;
-    
-    // Sanity check
-    if (fbc.operator->() == 0) {
-      QDPIO::cerr << "JITExpCloverTerm: error: fbc is null" << std::endl;
-      QDP_abort(1);
-    }
-   
-    //
-    // Yuk. Some bits of knowledge of the dslash term are buried in the 
-    // effective mass term. They show up here. If I wanted some more 
-    // complicated dslash then this will have to be fixed/adjusted.
-    //
-    RealT diag_mass;
-    {
-      RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-      diag_mass = 1 + (Nd-1)*ff + param.Mass;
-    }
-    
-     
-    {
-      RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
-      param.clovCoeffR *= Real(0.5) * ff / diag_mass;
-      param.clovCoeffT *= Real(0.5) / diag_mass;
-    }
-    
-    /* Calculate F(mu,nu) */
-    //multi1d<LatticeColorMatrix> f;
-    //mesField(f, u);
-    //makeClov(f, diag_mass);
-        
-    tr_log_diag_ = from.tr_log_diag_;
-   
-    tr_M = from.tr_M;
- 
-/*#  pragma omp parallel for
-    for (int site = 0; site < Layout::sitesOnNode(); ++site)
-    {
-      tr_M.elem(site).elem().elem().elem() = from.tr_M.elem(site).elem().elem().elem();
-    }
-*/    
-    //tr_M = zero;
-
-    tri_dia = from.tri_dia;
-    tri_off = from.tri_off;
-    C=from.C;
-    qc = from.qc_inv;
-    qc_inv = from.qc;
-
-    END_CODE();  
+     create(fs,param_,from,1);
   }
-
-
 
 
   //! Creation routine
@@ -870,7 +810,6 @@ namespace Chroma
   {
     START_CODE();
 
-    //std::cout << "PTX Clover create "  << (void*)this << "\n";
     QDPIO::cout << "Creating JITExpCloverTerm" << std::endl; 
     u.resize(Nd);
     
@@ -926,11 +865,7 @@ namespace Chroma
       for (int block = 0; block < 2; ++block)
       {
     for (int d = 0; d < 6; ++d)
-    {
-      // Inline accumulate the trace
-      //checked this A=A^dagger, det(A)=det(sqrt(A^dagger A )) = tr(abs(A))
-      tr_M.elem(site).elem().elem().elem() =  tr_M.elem(site).elem().elem().elem() + (QDP::Word<double>) fabs(tri_dia.elem(site).comp[block].diag[d].elem().elem()); //checked this A=A^dagger, so  
-    }
+
     for (int i = 0; i < 6; ++i)
     {
         for (int j = 0; j < 6; ++j)
@@ -1130,15 +1065,13 @@ namespace Chroma
     auto tri_off_j = tri_off_jit.elem(JitDeviceLayout::Coalesced , r_idx );
 
     typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
-    //diag_mass_reg.setup( diag_mass_jit.elem() );
+
     diag_mass_reg.setup_value( diag_mass_jit.elem() );
 
 
     for(int jj = 0; jj < 2; jj++) {
       for(int ii = 0; ii < 2*Nc; ii++) {
-	  //tri_dia_j.elem(jj).elem(ii) = diag_mass_reg.elem().elem();
-      zero_rep(tri_dia_j.elem(jj).elem(ii));
-	//tri[site].diag[jj][ii] = diag_mass.elem().elem().elem();
+          zero_rep(tri_dia_j.elem(jj).elem(ii));
       }
     }
 
@@ -1240,9 +1173,6 @@ namespace Chroma
     U f4 = f[4] * getCloverCoeff(1,3);
     U f5 = f[5] * getCloverCoeff(2,3);    
 
-    
-    //QDPIO::cout << "PTX Clover make "  << (void*)this << "\n";
-    //std::cout << "PTX Clover make "  << (void*)this << "\n";
     static JitFunction function;
     T dummy;
     if (function.empty())
@@ -1254,25 +1184,6 @@ namespace Chroma
     END_CODE();
   }
   
-
-  //! Invert
-  /*!
-   * Computes the inverse of the term on cb using Cholesky
-   */
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::choles(int cb)
-  {
-    START_CODE();
-
-    // When you are doing the cholesky - also fill out the trace_log_diag piece)
-    // chlclovms(tr_log_diag_, cb);
-    // Switch to LDL^\dag inversion
-   //ldagdlinv(tr_log_diag_,cb);
-    ldagdlinv(tr_M, cb);
-    END_CODE();
-  }
-
-
   //! Invert
   /*!
    * Computes the inverse of the term on cb using Cholesky
@@ -1292,288 +1203,8 @@ namespace Chroma
     // Need to thread generic sums in QDP++?
     // Need to thread generic norm2() in QDP++?
     return sum(tr_M, rb[cb]);
-    //return sum(tr_log_diag_, rb[cb]);
+
   }
-
-
-#if 1
-  template<typename T,typename X,typename Y>
-  void function_ldagdlinv_exp_exec( JitFunction& function,
-				T& tr_log_diag,
-				X& tri_dia,
-				Y& tri_off,
-				const Subset& s)
-  {
-#ifdef QDP_DEEP_LOG
-    function.type_W = typeid(REAL).name();
-    function.set_dest_id( tr_log_diag.getId() );
-    function.set_is_lat(true);
-#endif
-    
-    AddressLeaf addr_leaf(s);
-
-    forEach(tr_log_diag, addr_leaf, NullCombine());
-    forEach(tri_dia, addr_leaf, NullCombine());
-    forEach(tri_off, addr_leaf, NullCombine());
-
-    int th_count = s.numSiteTable();
-
-    WorkgroupGuardExec workgroupGuardExec(th_count);
-
-    std::vector<QDPCache::ArgKey> ids;
-    workgroupGuardExec.check(ids);
-    ids.push_back( s.getIdSiteTable() );
-    for(unsigned i=0; i < addr_leaf.ids.size(); ++i) 
-      ids.push_back( addr_leaf.ids[i] );
-    jit_launch(function,th_count,ids);
-  }
-
-
-
-
-
-  template<typename U,typename T,typename X,typename Y>
-  void function_ldagdlinv_exp_build(JitFunction& function,
-				const T& tr_log_diag,
-				const X& tri_dia,
-				const Y& tri_off,
-				const Subset& s)
-  {
-    typedef typename WordType<U>::Type_t REALT;
-
-    //std::cout << __PRETTY_FUNCTION__ << " entering\n";
-
-    llvm_start_new_function("ldagdlinv",__PRETTY_FUNCTION__);
-
-    WorkgroupGuard workgroupGuard;
-    ParamRef p_site_table = llvm_add_param<int*>();
-
-    ParamLeafScalar param_leaf;
-
-    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
-    TJIT tr_log_diag_jit(forEach(tr_log_diag, param_leaf, TreeCombine()));
-
-    typedef typename LeafFunctor<X, ParamLeafScalar>::Type_t  XJIT;
-    XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
-
-    typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
-    YJIT tri_off_jit(forEach(tri_off, param_leaf, TreeCombine()));
-
-    llvm::Value* r_idx_thread = llvm_thread_idx();
-
-    workgroupGuard.check(r_idx_thread);
-
-    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
-
-    auto tr_log_diag_j = tr_log_diag_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    auto tri_dia_j     = tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    auto tri_off_j     = tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-
-    typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_r;
-    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_r;
-
-    tri_dia_r.setup( tri_dia_j );
-    tri_off_r.setup( tri_off_j );
-
-
-    RScalarREG<WordREG<REALT> > zip;
-    zero_rep(zip);
-    int N = 2*Nc;
-      
-    //int site_neg_logdet=0;
-  
-    for(int block=0; block < 2; block++) {
-	  
-      RScalarREG<WordREG<REALT> >   inv_d[6] ;
-      RComplexREG<WordREG<REALT> >  inv_offd[15] ;
-      RComplexREG<WordREG<REALT> >  v[6] ;
-      RScalarREG<WordREG<REALT> >   diag_g[6] ;
-
-      for(int i=0; i < N; i++) {
-	inv_d[i] = tri_dia_r.elem(block).elem(i);
-      }
-
-      for(int i=0; i < 15; i++) { 
-	inv_offd[i] = tri_off_r.elem(block).elem(i);
-      }
-
-
-      for(int j=0; j < N; ++j) { 
-	    
-	for(int i=0; i < j; i++) { 
-	  int elem_ji = j*(j-1)/2 + i;
-	      
-	  RComplexREG<WordREG<REALT> > A_ii = cmplx( inv_d[i], zip );
-	  v[i] = A_ii*adj(inv_offd[elem_ji]);
-	}
-	    
-
-	v[j] = cmplx(inv_d[j],zip);
-	    
-	for(int k=0; k < j; k++) { 
-	  int elem_jk = j*(j-1)/2 + k;
-	  v[j] -= inv_offd[elem_jk]*v[k];
-	}
-	    
-	inv_d[j] = real( v[j] );
-	    
-	for(int k=j+1; k < N; k++) { 
-	  int elem_kj = k*(k-1)/2 + j;
-	  for(int l=0; l < j; l++) { 
-	    int elem_kl = k*(k-1)/2 + l;
-	    inv_offd[elem_kj] -= inv_offd[elem_kl] * v[l];
-	  }
-	  inv_offd[elem_kj] /= v[j];
-	}
-      }
-
-
-      // Now fix up the inverse
-      RScalarREG<WordREG<REALT> > one(1.0);
-      //one.elem() = (REALT)1;
-	  
-      for(int i=0; i < N; i++) { 
-	diag_g[i] = one/inv_d[i];
-      
-	// Compute the trace log
-	// NB we are always doing trace log | A | 
-	// (because we are always working with actually A^\dagger A
-	//  even in one flavour case where we square root)
-	tr_log_diag_j.elem().elem() += log(fabs(inv_d[i]));
-	// However, it is worth counting just the no of negative logdets
-	// on site
-#if 0
-	if( inv_d[i].elem() < 0 ) { 
-	  site_neg_logdet++;
-	}
-#endif
-      }
-
-      // Now we need to invert the L D L^\dagger 
-      // We can do this by solving:
-      //
-      //  L D L^\dagger M^{-1} = 1   
-      //
-      // This can be done by solving L D X = 1  (X = L^\dagger M^{-1})
-      //
-      // Then solving L^\dagger M^{-1} = X
-      //
-      // LD is lower diagonal and so X will also be lower diagonal.
-      // LD X = 1 can be solved by forward substitution.
-      //
-      // Likewise L^\dagger is strictly upper triagonal and so
-      // L^\dagger M^{-1} = X can be solved by forward substitution.
-      RComplexREG<WordREG<REALT> > sum;
-      for(int k = 0; k < N; ++k) {
-
-	for(int i = 0; i < k; ++i) {
-	  zero_rep(v[i]);
-	}
-	    
-	/*# Forward substitution */
-	    
-	// The first element is the inverse of the diagonal
-	v[k] = cmplx(diag_g[k],zip);
-	    
-	for(int i = k+1; i < N; ++i) {
-	  zero_rep(v[i]);
-	      
-	  for(int j = k; j < i; ++j) {
-	    int elem_ij = i*(i-1)/2+j;	
-		
-	    // subtract l_ij*d_j*x_{kj}
-	    v[i] -= inv_offd[elem_ij] *inv_d[j]*v[j];
-		
-	  }
-	      
-	  // scale out by 1/d_i
-	  v[i] *= diag_g[i];
-	}
-	    
-	/*# Backward substitution */
-	// V[N-1] remains unchanged
-	// Start from V[N-2]
-	    
-	for(int i = N-2; (int)i >= (int)k; --i) {
-	  for(int j = i+1; j < N; ++j) {
-	    int elem_ji = j*(j-1)/2 + i;
-	    // Subtract terms of typ (l_ji)*x_kj
-	    v[i] -= adj(inv_offd[elem_ji]) * v[j];
-	  }
-	}
-	    
-	/*# Overwrite column k of invcl.offd */
-	inv_d[k] = real(v[k]);
-	for(int i = k+1; i < N; ++i) {
-
-	  int elem_ik = i*(i-1)/2+k;
-	  inv_offd[elem_ik] = v[i];
-	}
-      }
-
-      // Overwrite original data
-      for(int i=0; i < N; i++) { 
-	tri_dia_j.elem(block).elem(i) = inv_d[i];
-      }
-      for(int i=0; i < 15; i++) { 
-	tri_off_j.elem(block).elem(i) = inv_offd[i];
-      }
-    }
-
-    //    std::cout << __PRETTY_FUNCTION__ << " leaving\n";
-
-    jit_get_function(function);
-  }
-#endif
-
-
-
-
-  /*! An LDL^\dag decomposition and inversion? */
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::ldagdlinv(LatticeREAL& tr_Minv, int cb)
-  {
-    START_CODE();
-
-    if ( 2*Nc < 3 )
-      {
-	QDPIO::cerr << __func__ << ": Matrix is too small" << std::endl;
-	QDP_abort(1);
-      }
-
-    // Zero trace log
-    //tr_log_diag[rb[cb]] = zero;
-    tr_Minv[rb[cb]] = zero;
-
-    //QDPIO::cout << "PTX Clover ldagdlinv " << (void*)this << "\n";
-    //std::cout << "PTX Clover ldagdlinv " << (void*)this << "\n";
-    static JitFunction function;
-    /*
-    if (function.empty())
-      function_ldagdlinv_exp_build<U>(function, tr_Minv, tri_dia, tri_off, rb[cb] );
-
-    // Execute the function
-    function_ldagdlinv_exp_exec(function, tr_Minv, tri_dia, tri_off, rb[cb] );
-    */
-    // This comes from the days when we used to do Cholesky
-    END_CODE();
-  }
- 
-  /*! CHLCLOVMS - Cholesky decompose the clover mass term and uses it to
-   *              compute  lower(A^-1) = lower((L.L^dag)^-1)
-   *              Adapted from Golub and Van Loan, Matrix Computations, 2nd, Sec 4.2.4
-   *
-   * Arguments:
-   *
-   * \param DetP         flag whether to compute determinant (Read)
-   * \param logdet       logarithm of the determinant        (Write)
-   * \param cb           checkerboard of work                (Read)
-   */
-
-
-
-
-
 
   //! TRIACNTR 
   /*! 
@@ -1607,366 +1238,8 @@ namespace Chroma
    *  \param clov      clover term                        (Read) 
    *  \param mat       label of the Gamma matrix          (Read)
    */
-
-#if 0
-  template<typename U,typename X,typename Y>
-  void function_triacntr_exec( JitFunction& function,
-			       U& B,
-			       const X& tri_dia,
-			       const Y& tri_off,
-			       int mat,
-			       const Subset& s)
-  {
-#ifdef QDP_DEEP_LOG
-    function.type_W = typeid(REAL).name();
-    function.set_dest_id( B.getId() );
-    function.set_is_lat(true);
-#endif
-    
-    AddressLeaf addr_leaf(s);
-
-    forEach(B, addr_leaf, NullCombine());
-    forEach(tri_dia, addr_leaf, NullCombine());
-    forEach(tri_off, addr_leaf, NullCombine());
-
-    int th_count = s.numSiteTable();
-
-    WorkgroupGuardExec workgroupGuardExec(th_count);
-
-    JitParam jit_mat( QDP_get_global_cache().addJitParamInt( mat ) );
-
-    std::vector<QDPCache::ArgKey> ids;
-    workgroupGuardExec.check(ids);
-    ids.push_back( s.getIdSiteTable() );
-    ids.push_back( jit_mat.get_id() );
-    for(unsigned i=0; i < addr_leaf.ids.size(); ++i) 
-      ids.push_back( addr_leaf.ids[i] );
-    jit_launch(function,th_count,ids);
-  }
-
-
-
-
-  template<typename U,typename X,typename Y>
-  void function_triacntr_build( JitFunction& function,
-				const U& B,
-				const X& tri_dia,
-				const Y& tri_off,
-				int mat,
-				const Subset& s)
-  {
-    //std::cout << __PRETTY_FUNCTION__ << ": entering\n";
-
-    typedef typename WordType<U>::Type_t REALT;
-
-    llvm_start_new_function( "triacntr" , __PRETTY_FUNCTION__ );
-
-    WorkgroupGuard workgroupGuard;
-    ParamRef p_site_table = llvm_add_param<int*>();
-
-    ParamRef p_mat    = llvm_add_param<int>();
-
-    ParamLeafScalar param_leaf;
-
-    typedef typename LeafFunctor<U, ParamLeafScalar>::Type_t  UJIT;
-    UJIT B_jit(forEach(B, param_leaf, TreeCombine()));
-
-    typedef typename LeafFunctor<X, ParamLeafScalar>::Type_t  XJIT;
-    XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
-
-    typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
-    YJIT tri_off_jit(forEach(tri_off, param_leaf, TreeCombine()));
-
-    llvm::Value* r_idx_thread = llvm_thread_idx();
-
-    workgroupGuard.check(r_idx_thread);
-
-    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
-
-    llvm::Value * r_mat    = llvm_derefParam( p_mat );
-
-    auto B_j = B_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    auto tri_dia_j = tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    auto tri_off_j = tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-
-    typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_r;
-    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_r;
-
-    tri_dia_r.setup( tri_dia_j );
-    tri_off_r.setup( tri_off_j );
-
-    JitSwitch sw(r_mat);
-    {
-      /*# gamma(   0)   1  0  0  0            # ( 0000 )  --> 0 */
-      /*#               0  1  0  0 */
-      /*#               0  0  1  0 */
-      /*#               0  0  0  1 */
-      /*# From diagonal part */
-      sw.case_begin(0);
-      {
-	RComplexREG<WordREG<REALT> > lctmp0;
-	RScalarREG< WordREG<REALT> > lr_zero0;
-	RScalarREG< WordREG<REALT> > lrtmp0;
-    
-	zero_rep(lr_zero0);
-	    
-	for(int i0 = 0; i0 < Nc; ++i0)
-	  {
-	    lrtmp0 = tri_dia_r.elem(0).elem(i0);
-	    lrtmp0 += tri_dia_r.elem(0).elem(i0+Nc);
-	    lrtmp0 += tri_dia_r.elem(1).elem(i0);
-	    lrtmp0 += tri_dia_r.elem(1).elem(i0+Nc);
-	    B_j.elem().elem(i0,i0) = cmplx(lrtmp0,lr_zero0);
-	  }
-	    
-	/*# From lower triangular portion */
-	int elem_ij0 = 0;
-	for(int i0 = 1; i0 < Nc; ++i0) {
-	      
-	  int elem_ijb0 = (i0+Nc)*(i0+Nc-1)/2 + Nc;
-	      
-	  for(int j0 = 0; j0 < i0; ++j0) {
-		
-	    lctmp0 = tri_off_r.elem(0).elem(elem_ij0);
-	    lctmp0 += tri_off_r.elem(0).elem(elem_ijb0);
-	    lctmp0 += tri_off_r.elem(1).elem(elem_ij0);
-	    lctmp0 += tri_off_r.elem(1).elem(elem_ijb0);
-		
-	    B_j.elem().elem(j0,i0) = lctmp0;
-	    B_j.elem().elem(i0,j0) = adj(lctmp0);
-		
-	    elem_ij0++;
-	    elem_ijb0++;
-	  }
-	}
-      }
-      sw.case_end();
-
-
-      /*# gamma(  12)  -i  0  0  0            # ( 0011 )  --> 3 */
-      /*#               0  i  0  0 */
-      /*#               0  0 -i  0 */
-      /*#               0  0  0  i */
-      /*# From diagonal part */
-      sw.case_begin( 3 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp3;
-	RScalarREG<WordREG<REALT> > lr_zero3;
-	RScalarREG<WordREG<REALT> > lrtmp3;
-	    
-	lr_zero3 = 0;
-	    
-	for(int i3 = 0; i3 < Nc; ++i3) {
-	      
-	  lrtmp3 = tri_dia_r.elem(0).elem(i3+Nc);
-	  lrtmp3 -= tri_dia_r.elem(0).elem(i3);
-	  lrtmp3 -= tri_dia_r.elem(1).elem(i3);
-	  lrtmp3 += tri_dia_r.elem(1).elem(i3+Nc);
-	  B_j.elem().elem(i3,i3) = cmplx(lr_zero3,lrtmp3);
-	}
-	    
-	/*# From lower triangular portion */
-	int elem_ij3 = 0;
-	for(int i3 = 1; i3 < Nc; ++i3) {
-	      
-	  int elem_ijb3 = (i3+Nc)*(i3+Nc-1)/2 + Nc;
-	      
-	  for(int j3 = 0; j3 < i3; ++j3) {
-		
-	    lctmp3 = tri_off_r.elem(0).elem(elem_ijb3);
-	    lctmp3 -= tri_off_r.elem(0).elem(elem_ij3);
-	    lctmp3 -= tri_off_r.elem(1).elem(elem_ij3);
-	    lctmp3 += tri_off_r.elem(1).elem(elem_ijb3);
-		
-	    B_j.elem().elem(j3,i3) = timesI(adj(lctmp3));
-	    B_j.elem().elem(i3,j3) = timesI(lctmp3);
-		
-	    elem_ij3++;
-	    elem_ijb3++;
-	  }
-	}
-      }
-      sw.case_end();
-
-      /*# gamma(  13)   0 -1  0  0            # ( 0101 )  --> 5 */
-      /*#               1  0  0  0 */
-      /*#               0  0  0 -1 */
-      /*#               0  0  1  0 */
-      sw.case_begin( 5 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp5;
-	RScalarREG<WordREG<REALT> > lrtmp5;
-	    
-	for(int i5 = 0; i5 < Nc; ++i5) {
-	      
-	  int elem_ij5 = (i5+Nc)*(i5+Nc-1)/2;
-	      
-	  for(int j5 = 0; j5 < Nc; ++j5) {
-		
-	    int elem_ji5 = (j5+Nc)*(j5+Nc-1)/2 + i5;
-		
-	    lctmp5 = adj(tri_off_r.elem(0).elem(elem_ji5));
-	    lctmp5 -= tri_off_r.elem(0).elem(elem_ij5);
-	    lctmp5 += adj(tri_off_r.elem(1).elem(elem_ji5));
-	    lctmp5 -= tri_off_r.elem(1).elem(elem_ij5);
-		
-	    B_j.elem().elem(i5,j5) = lctmp5;
-		
-	    elem_ij5++;
-	  }
-	}
-      }
-      sw.case_end();
-
-      /*# gamma(  23)   0 -i  0  0            # ( 0110 )  --> 6 */
-      /*#              -i  0  0  0 */
-      /*#               0  0  0 -i */
-      /*#               0  0 -i  0 */
-      sw.case_begin( 6 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp6;
-	RScalarREG<WordREG<REALT> > lrtmp6;
-	    
-	for(int i6 = 0; i6 < Nc; ++i6) {
-	      
-	  int elem_ij6 = (i6+Nc)*(i6+Nc-1)/2;
-	      
-	  for(int j6 = 0; j6 < Nc; ++j6) {
-		
-	    int elem_ji6 = (j6+Nc)*(j6+Nc-1)/2 + i6;
-	
-	    lctmp6 = adj(tri_off_r.elem(0).elem(elem_ji6));
-	    lctmp6 += tri_off_r.elem(0).elem(elem_ij6);
-	    lctmp6 += adj(tri_off_r.elem(1).elem(elem_ji6));
-	    lctmp6 += tri_off_r.elem(1).elem(elem_ij6);
-		
-	    B_j.elem().elem(i6,j6) = timesMinusI(lctmp6);
-		
-	    elem_ij6++;
-	  }
-	}
-      }
-      sw.case_end();
-
-      /*# gamma(  14)   0  i  0  0            # ( 1001 )  --> 9 */
-      /*#               i  0  0  0 */
-      /*#               0  0  0 -i */
-      /*#               0  0 -i  0 */
-      sw.case_begin( 9 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp9;
-	RScalarREG<WordREG<REALT> > lrtmp9;
-	    
-	for(int i9 = 0; i9 < Nc; ++i9) {
-	      
-	  int elem_ij9 = (i9+Nc)*(i9+Nc-1)/2;
-	      
-	  for(int j9 = 0; j9 < Nc; ++j9) {
-		
-	    int elem_ji9 = (j9+Nc)*(j9+Nc-1)/2 + i9;
-	
-	    lctmp9 = adj(tri_off_r.elem(0).elem(elem_ji9));
-	    lctmp9 += tri_off_r.elem(0).elem(elem_ij9);
-	    lctmp9 -= adj(tri_off_r.elem(1).elem(elem_ji9));
-	    lctmp9 -= tri_off_r.elem(1).elem(elem_ij9);
-		
-	    B_j.elem().elem(i9,j9) = timesI(lctmp9);
-		
-	    elem_ij9++;
-	  }
-	}
-      }
-      sw.case_end();
-
-
-      /*# gamma(  24)   0 -1  0  0            # ( 1010 )  --> 10 */
-      /*#               1  0  0  0 */
-      /*#               0  0  0  1 */
-      /*#               0  0 -1  0 */
-      sw.case_begin( 10 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp10;
-	RScalarREG<WordREG<REALT> > lrtmp10;
-	    
-	for(int i10 = 0; i10 < Nc; ++i10) {
-	      
-	  int elem_ij10 = (i10+Nc)*(i10+Nc-1)/2;
-	      
-	  for(int j10 = 0; j10 < Nc; ++j10) {
-		
-	    int elem_ji10 = (j10+Nc)*(j10+Nc-1)/2 + i10;
-	
-	    lctmp10 = adj(tri_off_r.elem(0).elem(elem_ji10));
-	    lctmp10 -= tri_off_r.elem(0).elem(elem_ij10);
-	    lctmp10 -= adj(tri_off_r.elem(1).elem(elem_ji10));
-	    lctmp10 += tri_off_r.elem(1).elem(elem_ij10);
-		
-	    B_j.elem().elem(i10,j10) = lctmp10;
-		
-	    elem_ij10++;
-	  }
-	}
-      }
-      sw.case_end();
-
-
-      /*# gamma(  34)   i  0  0  0            # ( 1100 )  --> 12 */
-      /*#               0 -i  0  0 */
-      /*#               0  0 -i  0 */
-      /*#               0  0  0  i */
-      /*# From diagonal part */
-      sw.case_begin( 12 );
-      {
-	RComplexREG<WordREG<REALT> > lctmp12;
-	RScalarREG<WordREG<REALT> > lr_zero12;
-	RScalarREG<WordREG<REALT> > lrtmp12;
-	    
-	lr_zero12 = 0;
-	    
-	for(int i12 = 0; i12 < Nc; ++i12) {
-      
-	  lrtmp12 = tri_dia_r.elem(0).elem(i12);
-	  lrtmp12 -= tri_dia_r.elem(0).elem(i12+Nc);
-	  lrtmp12 -= tri_dia_r.elem(1).elem(i12);
-	  lrtmp12 += tri_dia_r.elem(1).elem(i12+Nc);
-	  B_j.elem().elem(i12,i12) = cmplx(lr_zero12,lrtmp12);
-	}
-	    
-	/*# From lower triangular portion */
-	int elem_ij12 = 0;
-	for(int i12 = 1; i12 < Nc; ++i12) {
-	      
-	  int elem_ijb12 = (i12+Nc)*(i12+Nc-1)/2 + Nc;
-	      
-	  for(int j12 = 0; j12 < i12; ++j12) {
-	
-	    lctmp12 = tri_off_r.elem(0).elem(elem_ij12);
-	    lctmp12 -= tri_off_r.elem(0).elem(elem_ijb12);
-	    lctmp12 -= tri_off_r.elem(1).elem(elem_ij12);
-	    lctmp12 += tri_off_r.elem(1).elem(elem_ijb12);
-		
-	    B_j.elem().elem(i12,j12) = timesI(lctmp12);
-	    B_j.elem().elem(j12,i12) = timesI(adj(lctmp12));
-		
-	    elem_ij12++;
-	    elem_ijb12++;
-	  }
-	}
-      }
-      sw.case_end();
-
-      sw.case_default();
-      {
-      }
-      sw.case_end();
-    }
-
-    jit_get_function(function);
-  }
-#endif
-
-
-   
+  
+ 
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::triacntr(U& B, int mat, int cb) const
   {
@@ -1980,8 +1253,6 @@ namespace Chroma
 	QDP_abort(1);
       }
 
-    //QDPIO::cout << "PTX Clover triacntr " << (void*)this << "\n";
-    //std::cout << "PTX Clover triacntr " << (void*)this << "\n";
     static JitFunction function;
 
     if (function.empty())
@@ -1992,6 +1263,7 @@ namespace Chroma
 
     END_CODE();
   }
+
 
   //! Returns the appropriate clover coefficient for indices mu and nu
   template<typename T, typename U,int N_exp>
@@ -2147,7 +1419,6 @@ namespace Chroma
     if (N_exp_default <5)
        pow_max=N_exp_default;
    
-    //zero_rep(tmp);
 
     int n = 2*Nc;
     for(int cspin = 0; cspin < n; ++cspin)
@@ -2161,44 +1432,9 @@ namespace Chroma
       // Main loop:  chi = psi + q[i]/q[i-1] A chi
       for (int pow = pow_max; pow > 0; --pow)
       {
-            //siteApplicationBlock<REALT, 0>(tmp, tri_in.A, cchi);
 
-        //applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,0>(tmp_r,chi_r,tri_dia_r,tri_off_r);
-        //applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,1>(tmp_r,chi_r,tri_dia_r,tri_off_r);
-
-
-
-    for(int i = 0; i < n; ++i)
-      {
-    tmp_r.elem((0*n+i)/3).elem((0*n+i)%3) = tri_dia_r.elem(0).elem(i) * chi_r.elem((0*n+i)/3).elem((0*n+i)%3);
-    // cchi[0*n+i] = tri[site].diag[0][i] * ppsi[0*n+i];
-
-    tmp_r.elem((1*n+i)/3).elem((1*n+i)%3) = tri_dia_r.elem(1).elem(i) * chi_r.elem((1*n+i)/3).elem((1*n+i)%3);
-    // cchi[1*n+i] = tri[site].diag[1][i] * ppsi[1*n+i];
-      }
-
-    int kij = 0;  
-    for(int i = 0; i < n; ++i)
-      {
-    for(int j = 0; j < i; j++)
-      {
-        tmp_r.elem((0*n+i)/3).elem((0*n+i)%3) += tri_off_r.elem(0).elem(kij) * chi_r.elem((0*n+j)/3).elem((0*n+j)%3);
-        // cchi[0*n+i] += tri[site].offd[0][kij] * ppsi[0*n+j];
-
-        tmp_r.elem((0*n+j)/3).elem((0*n+j)%3) += conj(tri_off_r.elem(0).elem(kij)) * chi_r.elem((0*n+i)/3).elem((0*n+i)%3);
-        // cchi[0*n+j] += conj(tri[site].offd[0][kij]) * ppsi[0*n+i];
-
-        tmp_r.elem((1*n+i)/3).elem((1*n+i)%3) += tri_off_r.elem(1).elem(kij) *chi_r.elem((1*n+j)/3).elem((1*n+j)%3);
-        // cchi[1*n+i] += tri[site].offd[1][kij] * ppsi[1*n+j];
-
-        tmp_r.elem((1*n+j)/3).elem((1*n+j)%3) += conj(tri_off_r.elem(1).elem(kij)) * chi_r.elem((1*n+i)/3).elem((1*n+i)%3);
-        // cchi[1*n+j] += conj(tri[site].offd[1][kij]) * ppsi[1*n+i];
-
-        kij++;
-      }
-      }
-
-
+        applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,0>(tmp_r,chi_r,tri_dia_r,tri_off_r);
+        applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,1>(tmp_r,chi_r,tri_dia_r,tri_off_r);
         for(int cspin = 0; cspin < n; ++cspin)
         {
             // Operator
@@ -2322,45 +1558,6 @@ namespace Chroma
    * \param cb      Checkerboard of OUTPUT std::vector               (Read) 
    */
 
-#if 0
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::apply(T& chi, const T& psi, 
-				  enum PlusMinus isign, int cb) const
-  {
-    START_CODE();
-    
-    if ( Ns != 4 ) {
-      QDPIO::cerr << __func__ << ": CloverTerm::apply requires Ns==4" << std::endl;
-      QDP_abort(1);
-    }
-
-    //QDPIO::cout << "PTX Clover apply"  << (void*)this << "\n";
-    //std::cout << "PTX Clover apply"  << (void*)this << "\n";
-
-#if 0
-    static JitFunction function;
-    //Standard clover term
-    if (function.empty())
-      function_apply_clov_build( function, chi, psi, tri_dia, tri_off, rb[cb] );
-
-    // Execute the function
-    function_apply_clov_exec(function, chi, psi, tri_dia, tri_off, rb[cb] );
-#else
-    static JitFunction function;
-
-    if (function.empty())
-      function_apply_exp_clov_build( function, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
-
-    // Execute the function
-    function_apply_exp_clov_exec( function, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
-#endif
-
-    (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
-
-    END_CODE();
-  }
-
-#else
   template <typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::apply(T& chi, const T& psi, enum PlusMinus isign,
                         int cb) const
@@ -2390,9 +1587,6 @@ namespace Chroma
     END_CODE();
 
   }
-
-#endif
-
 
   template<typename T, typename W>
   void function_apply_coeff_exec(JitFunction& function,
