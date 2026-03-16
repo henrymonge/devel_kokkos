@@ -118,7 +118,6 @@ TEST_F(ExpClovFixture, CheckOp)
     clov.apply(res, src, PLUS, cb);
     eclov.applyPower(dummy, src, PLUS, cb, 1);
     res_exp[rb[cb]] = src + dummy;
-    res_exp[rb[cb]] *= Real(Nd + Mass);
 
     diff[rb[cb]] = res_exp - res;
     Double normdiff = sqrt(norm2(diff, rb[cb]) / norm2(src, rb[cb]));
@@ -177,7 +176,6 @@ TEST_F(ExpClovFixture, CheckApplyClover)
     clov.apply(res, src, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 1);
     res_exp[rb[cb]] = src + res2;
-    res_exp[rb[cb]] *= Real(Nd + Mass);
 
     diff[rb[cb]] = res_exp - res;
 
@@ -481,7 +479,6 @@ TEST_F(ExpClovFixture, CheckOpExpClov)
     //eclov.apply(dummy, src, PLUS, cb);
 
     res_exp[rb[cb]] = dummy;
-    //res_exp[rb[cb]] *= Real(Nd + Mass);
 
     QDPIO::cout << " Real(Nd + Mass) = " << Real(Nd + Mass) << " \n";
 
