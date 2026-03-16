@@ -465,6 +465,7 @@ namespace Chroma
     OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv; 
     OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
     multi3d<LatticeDouble> C_arr; // Fill this out during create;
+    RealT diag_mass;
 
   };
 
@@ -748,11 +749,9 @@ namespace Chroma
     // effective mass term. They show up here. If I wanted some more 
     // complicated dslash then this will have to be fixed/adjusted.
     //
-    RealT diag_mass;
-    {
-      RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-      diag_mass = 1 + (Nd-1)*ff + param.Mass;
-    }
+    
+    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
+    diag_mass = 1 + (Nd-1)*ff + param.Mass;
     
      
     {
@@ -828,12 +827,8 @@ namespace Chroma
     // effective mass term. They show up here. If I wanted some more 
     // complicated dslash then this will have to be fixed/adjusted.
     //
-    RealT diag_mass;
-    {
-      RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-      diag_mass = 1 + (Nd-1)*ff + param.Mass;
-    }
-
+    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
+    diag_mass = 1 + (Nd-1)*ff + param.Mass;
 
     {
       RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
@@ -1290,8 +1285,9 @@ namespace Chroma
     END_CODE();
   }
 
-  template<typename T, typename X,typename Y, typename Q>
+  template<typename RealT,typename T, typename X,typename Y, typename Q>
   void function_apply_exp_clov_exec(JitFunction& function,
+                const RealT& diag_mass,
 				T& chi,
 				const T& psi,
 				const X& tri_dia,
@@ -1307,6 +1303,7 @@ namespace Chroma
    
     AddressLeaf addr_leaf(s);
 
+    forEach(diag_mass, addr_leaf, NullCombine());
     forEach(chi, addr_leaf, NullCombine());
     forEach(psi, addr_leaf, NullCombine());
     forEach(tri_dia, addr_leaf, NullCombine());
@@ -1359,8 +1356,9 @@ namespace Chroma
 }
 
 
-  template<typename T, typename X,typename Y, typename Q>
+  template<typename RealT,typename T, typename X,typename Y, typename Q>
   void function_apply_exp_clov_build( JitFunction& function,
+                  const RealT& diag_mass,
 				  const T& chi,
 				  const T& psi,
 				  const X& tri_dia,
@@ -1376,6 +1374,9 @@ namespace Chroma
     ParamLeafScalar param_leaf;
 
     typedef typename WordType<T>::Type_t REALT;
+
+    typedef typename LeafFunctor<RealT, ParamLeafScalar>::Type_t  RealTJIT;
+    RealTJIT diag_mass_jit(forEach(diag_mass, param_leaf, TreeCombine()));
 
     typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
     TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
@@ -1406,6 +1407,10 @@ namespace Chroma
     workgroupGuard.check(r_idx_thread);
 
     llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
+
+
+    typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
+    diag_mass_reg.setup_value( diag_mass_jit.elem() );
 
     auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
     psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
@@ -1451,8 +1456,8 @@ namespace Chroma
     for(int cspin = 0; cspin < n; ++cspin)
     {   
 
-        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) *= qc_r.elem(0).elem(0);
-        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) *= qc_r.elem(1).elem(0);
+        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) *= qc_r.elem(0).elem(0)*diag_mass_reg.elem().elem();
+        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) *= qc_r.elem(1).elem(0)*diag_mass_reg.elem().elem();
     }
 
 
@@ -1574,12 +1579,12 @@ namespace Chroma
     static JitFunction function;
 
     if (function.empty()){
-      function_apply_exp_clov_build( function, chi, psi, tri_dia, tri_off, qc, rb[cb]);
+      function_apply_exp_clov_build( function, diag_mass,  chi, psi, tri_dia, tri_off, qc, rb[cb]);
 
     }
 
     // Execute the function
-    function_apply_exp_clov_exec( function, chi, psi, tri_dia, tri_off, qc, rb[cb]);
+    function_apply_exp_clov_exec( function, diag_mass, chi, psi, tri_dia, tri_off, qc, rb[cb]);
 
 
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
@@ -1769,12 +1774,13 @@ namespace Chroma
     }
       
     static JitFunction function;
+    RealT inv_diag_mass = 1.0 /diag_mass;
 
     if (function.empty()){
-      function_apply_exp_clov_build( function, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
+      function_apply_exp_clov_build( function, inv_diag_mass,  chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
     }
     // Execute the function
-    function_apply_exp_clov_exec( function, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
+    function_apply_exp_clov_exec( function, inv_diag_mass, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
 
 
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
