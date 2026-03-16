@@ -74,7 +74,7 @@ namespace Chroma
 
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 1);
-    chi *= (Real(Nd) + param.Mass);
+    //chi *= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -93,7 +93,7 @@ namespace Chroma
     // Nuke for testing
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 0);
-    chi *= (Real(Nd) + param.Mass);
+    //chi *= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -196,7 +196,7 @@ namespace Chroma
     //  chi_o  =  A_oo  psi_o  -  tmp1_o
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 1);
-    chi *= (Real(Nd) + param.Mass);
+    //chi *= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();

@@ -45,7 +45,7 @@ namespace Chroma
 
     //  chi   =  A . psi - 0.5 * D' . psi  */
     A(chi, psi, isign);
-    chi *= (Real(Nd) + param.Mass);
+    //chi *= (Real(Nd) + param.Mass);
     D(tmp, psi, isign);
     chi += mhalf * tmp;
 
