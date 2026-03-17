@@ -299,7 +299,8 @@ namespace Chroma
 
 
     template <typename REALT, int i = 0>
-    inline void siteApplicationExp(RComplex<REALT>* __restrict__ cchi,
+    inline void siteApplicationExp(const RScalar<REALT> ddiag_mass,
+                   RComplex<REALT>* __restrict__ cchi,
 				   const ExpClovTriang<REALT>& tri_in,
 				   const RComplex<REALT>* const __restrict__ ppsi)
     {
@@ -344,12 +345,12 @@ namespace Chroma
 	if constexpr (i == 0)
 	{
 	  // Operator
-	  cchi[cspin] *= tri_in.q[0][0];
+	  cchi[cspin] *= tri_in.q[0][0]*ddiag_mass;
 	}
 	else
 	{
 	  // inverse
-	  cchi[cspin] *= tri_in.qinv[0][0];
+	  cchi[cspin] *= tri_in.qinv[0][0]*ddiag_mass;
 	}
       }
 
@@ -387,12 +388,12 @@ namespace Chroma
 	if constexpr (i == 0)
 	{
 	  // Operator
-	  cchi[cspin] *= tri_in.q[1][0];
+	  cchi[cspin] *= tri_in.q[1][0]*ddiag_mass;
 	}
 	else
 	{
 	  // Inverse
-	  cchi[cspin] *= tri_in.qinv[1][0];
+	  cchi[cspin] *= tri_in.qinv[1][0]*ddiag_mass;
 	}
       }
 
@@ -761,6 +762,7 @@ namespace Chroma
     multi1d<U> u;
     CloverFermActParams param;
     ExpClovTriang<REALT>* exp_tri;
+    RealT diag_mass;
   };
 
   // Empty constructor. Must use create later
@@ -801,12 +803,10 @@ namespace Chroma
     // effective mass term. They show up here. If I wanted some more
     // complicated dslash then this will have to be fixed/adjusted.
     //
-    RealT diag_mass;
-    {
-      RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-      diag_mass = 1 + (Nd - 1) * ff + param.Mass;
-    }
-
+    
+    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
+    diag_mass = 1 + (Nd - 1) * ff + param.Mass;
+    
     {
       RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
       param.clovCoeffR *= Real(0.5) * ff / diag_mass;
@@ -916,12 +916,10 @@ namespace Chroma
     // effective mass term. They show up here. If I wanted some more
     // complicated dslash then this will have to be fixed/adjusted.
     //
-    RealT diag_mass;
-    {
-      RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-      diag_mass = 1 + (Nd - 1) * ff + param.Mass;
-    }
-
+    
+    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
+    diag_mass = 1 + (Nd - 1) * ff + param.Mass;
+    
     {
       RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
       param.clovCoeffR *= RealT(0.5) * ff / diag_mass;
@@ -1659,7 +1657,8 @@ namespace Chroma
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    siteApplicationExp(cchi, tri[site], ppsi);
+    const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
+    siteApplicationExp(ddiag_mass, cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
@@ -1680,7 +1679,9 @@ namespace Chroma
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    siteApplicationExp<REALT, 1>(cchi, tri[site], ppsi);
+    const RScalar<REALT> inv_ddiag_mass = 1.0/diag_mass.elem(site).elem().elem();
+
+    siteApplicationExp<REALT, 1>(inv_ddiag_mass, cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
@@ -1777,6 +1778,9 @@ namespace Chroma
     template <typename T>
     struct ApplyArgs {
       typedef typename WordType<T>::Type_t REALT;
+      typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
+
+      RealT diag_mass;
       T& chi;
       const T& psi;
       const ExpClovTriang<REALT>* tri;
@@ -1873,7 +1877,9 @@ namespace Chroma
       START_CODE();
 
       typedef typename WordType<T>::Type_t REALT;
+      typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
       // Unwrap the args...
+      RealT diag_mass=arg->diag_mass;
       T& chi = arg->chi;
       const T& psi = arg->psi;
       const ExpClovTriang<REALT>* tri = arg->tri;
@@ -1887,8 +1893,8 @@ namespace Chroma
 	RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
 	const RComplex<REALT>* const ppsi =
 	  (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-
-	siteApplicationExp<REALT, inv>(cchi, tri[site], ppsi);
+    const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
+	siteApplicationExp<REALT, inv>(ddiag_mass,cchi, tri[site], ppsi);
       }
       END_CODE();
 #endif
@@ -1905,7 +1911,10 @@ namespace Chroma
       START_CODE();
 
       typedef typename WordType<T>::Type_t REALT;
+      typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
+
       // Unwrap the args...
+      RealT diag_mass = arg->diag_mass;
       T& chi = arg->chi;
       const T& psi = arg->psi;
       const ExpClovTriang<REALT>* tri = arg->tri;
@@ -2117,7 +2126,7 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    QDPExpCloverEnv::ApplyArgs<T> arg = {chi, psi, exp_tri, cb};
+    QDPExpCloverEnv::ApplyArgs<T> arg = {diag_mass, chi, psi, exp_tri, cb};
 
     int num_sites = rb[cb].siteTable().size();
 
@@ -2144,7 +2153,7 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    QDPExpCloverEnv::ApplyArgs<T> arg = {chi, psi, tri, cb};
+    QDPExpCloverEnv::ApplyArgs<T> arg = {diag_mass, chi, psi, tri, cb};
     int num_sites = rb[cb].siteTable().size();
 
     // The dispatch function is at the end of the file
@@ -2169,7 +2178,8 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    QDPExpCloverEnv::ApplyArgs<T> arg = {chi, psi, tri, cb};
+    RealT inv_diag_mass=1.0/diag_mass;
+    QDPExpCloverEnv::ApplyArgs<T> arg = {inv_diag_mass,chi, psi, tri, cb};
     int num_sites = rb[cb].siteTable().size();
 
     // The dispatch function is at the end of the file
