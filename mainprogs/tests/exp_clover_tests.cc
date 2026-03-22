@@ -64,16 +64,12 @@ public:
 
     clov.create(simpleFermState, p);
     eclov.create(simpleFermState, p);
-    //inv_eclov.create(simpleFermState, p);
-    //invclov.create(simpleFermState, p);
-
 
 #ifndef QDP_IS_QDPJIT
-    inv_eclov.create(simpleFermState, p);
-    inv_eclov.choles(0);
+    //inv_eclov.create(simpleFermState, p);
+    inv_eclov.createInv(simpleFermState,p,eclov);  // make a copy
 #else
     inv_eclov.createInv(simpleFermState,p,eclov);  // make a copy
-    inv_eclov.choles(0);
 #endif
   }
 
@@ -118,6 +114,7 @@ TEST_F(ExpClovFixture, CheckOp)
     clov.apply(res, src, PLUS, cb);
     eclov.applyPower(dummy, src, PLUS, cb, 1);
     res_exp[rb[cb]] = src + dummy;
+    res_exp[rb[cb]] *= Real(Nd + Mass);
 
     diff[rb[cb]] = res_exp - res;
     Double normdiff = sqrt(norm2(diff, rb[cb]) / norm2(src, rb[cb]));
@@ -176,6 +173,7 @@ TEST_F(ExpClovFixture, CheckApplyClover)
     clov.apply(res, src, PLUS, cb);
     eclov.applyPower(res2, src, PLUS, cb, 1);
     res_exp[rb[cb]] = src + res2;
+    res_exp[rb[cb]] *= Real(Nd + Mass);
 
     diff[rb[cb]] = res_exp - res;
 
@@ -383,9 +381,6 @@ TEST_F(ExpClovFixture, CheckApplyPower7)
   }
 }
  
-
-
-
 TEST_F(ExpClovFixture, CheckApplyInv)
 {
   LatticeFermion src, res, res2, dummy,diff;
@@ -400,8 +395,7 @@ TEST_F(ExpClovFixture, CheckApplyInv)
   //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
   //
   //  First test: (diag mass)[ 1 + E ] = regular clover term.
-
-
+  
   for (int cb = 0; cb < 2; ++cb)
   {
       eclov.apply(res, src, PLUS, cb);
@@ -415,7 +409,7 @@ TEST_F(ExpClovFixture, CheckApplyInv)
 
 }
 
-#if 0 //must be fixed for jit exp-clover
+#if 1 //must be fixed for jit exp-clover
 TEST_F(ExpClovFixture, CheckApplyExpClov)
 {
   LatticeFermion src, res, res2, dummy, diff;
@@ -437,9 +431,8 @@ TEST_F(ExpClovFixture, CheckApplyExpClov)
   for (int cb = 0; cb < 2; ++cb)
   {
     eclov.apply(res2, src, PLUS, cb);
-
     eclov.applyExpClov(dummy, src, PLUS, cb);
-    res[rb[cb]] = dummy/Real(Nd + Mass);
+    res[rb[cb]] = dummy;
   }
 
   diff = res-res2;
@@ -450,7 +443,7 @@ TEST_F(ExpClovFixture, CheckApplyExpClov)
   }
 #endif 
 
-#if 0 //must be fixed fot jit version
+#if 0 //must be fixed for jit version. It requires setting N_exp = 1 in the exp_clover_term...
 TEST_F(ExpClovFixture, CheckOpExpClov)
 {
   LatticeFermion src, res, res_exp, dummy, diff;
@@ -493,7 +486,7 @@ TEST_F(ExpClovFixture, CheckOpExpClov)
 }
 #endif 
 
-#if 0 //must be fixed for jit exp-clover
+#if 1 //must be fixed for jit exp-clover
 TEST_F(ExpClovFixture, CheckApplyInvExpClov)
 {
   LatticeFermion src, res, res2, dummy,diff;
@@ -514,19 +507,10 @@ TEST_F(ExpClovFixture, CheckApplyInvExpClov)
   inv_eclov.makeExpClov(PLUS,0,0);
   inv_eclov.makeExpClov(PLUS,1,0);
 
-
-  inv_eclov.cholesTest(0);
-  inv_eclov.cholesTest(1);
-
-  //invclov.choles(0);
-  //invclov.choles(1);
-
-
   for (int cb = 0; cb < 2; ++cb)
   {
     inv_eclov.applyExpClov(res, src, PLUS, cb);
     eclov.applyExpClov(res2, res, PLUS, cb);
-    //invclov.apply(res2,res, PLUS, cb);
   }
 
   diff = src-res2;

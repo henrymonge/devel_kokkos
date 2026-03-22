@@ -240,7 +240,7 @@ namespace Chroma
 
 
     template < typename REALT, int block = 0>
-    inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,int inv, double mclov)
+    inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,int inv, double diag_mass)
     {
 
       //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover  
@@ -248,10 +248,10 @@ namespace Chroma
       // Row 0
       if(inv==0){
           for (int i = 0; i < 6; i++)
-            qi[i] = ((RScalar<double>) mclov)*tri_in.q[block][i];
+            qi[i] = ((RScalar<REALT>) diag_mass)*tri_in.q[block][i];
       }else{
           for (int i = 0; i < 6; i++)
-            qi[i] = ((RScalar<double>) mclov)*tri_in.qinv[block][i];
+            qi[i] = tri_in.qinv[block][i]/((RScalar<REALT>) diag_mass);
 
       }
  
@@ -350,7 +350,7 @@ namespace Chroma
 	else
 	{
 	  // inverse
-	  cchi[cspin] *= tri_in.qinv[0][0]*ddiag_mass;
+	  cchi[cspin] *= tri_in.qinv[0][0]/ddiag_mass;
 	}
       }
 
@@ -393,7 +393,7 @@ namespace Chroma
 	else
 	{
 	  // Inverse
-	  cchi[cspin] *= tri_in.qinv[1][0]*ddiag_mass;
+	  cchi[cspin] *= tri_in.qinv[1][0]/ddiag_mass;
 	}
       }
 
@@ -813,6 +813,11 @@ namespace Chroma
       param.clovCoeffT *= Real(0.5) / diag_mass;
     }
 
+    
+
+
+    if (inv_op==1)
+         diag_mass = 1.0/diag_mass;
     /* Calculate F(mu,nu) */
     // multi1d<LatticeColorMatrix> f;
     // mesField(f, u);
@@ -845,7 +850,7 @@ namespace Chroma
       if (inv_op==1)
       {
         tri[site].qinv[block][i] = from.tri[site].q[block][i];
-        tri[site].q[block][i] = from.tri[site].qinv[block][i];
+        tri[site].q[block][i] = from.tri[site].qinv[block][i]; 
       }
       else
       {
@@ -876,7 +881,8 @@ namespace Chroma
   void QDPExpCloverTermT<T, U, N_exp>::create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
 					      const CloverFermActParams& param_,
 					      const QDPExpCloverTermT<T, U, N_exp>& from)
-  {
+  {  
+     QDPIO::cout << "Creating from copy\n";
      create(fs,param_,from,0);
   }
 
@@ -886,6 +892,7 @@ namespace Chroma
                           const CloverFermActParams& param_,
                           const QDPExpCloverTermT<T, U, N_exp>& from)
   {
+     QDPIO::cout << "Creating inverse\n";
      create(fs,param_,from,1);
   }
 
@@ -1679,9 +1686,9 @@ namespace Chroma
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    const RScalar<REALT> inv_ddiag_mass = 1.0/diag_mass.elem(site).elem().elem();
+    const RScalar<REALT> diag_mass = diag_mass.elem(site).elem().elem();
 
-    siteApplicationExp<REALT, 1>(inv_ddiag_mass, cchi, tri[site], ppsi);
+    siteApplicationExp<REALT, 1>(diag_mass, cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
@@ -1829,7 +1836,7 @@ namespace Chroma
       ExpClovTriang<REALT>* tri_out;
       ExpClovTriang<REALT>* tri;
       int cb;
-      Real mclov;
+      Real diag_mass;
     };
 
 
@@ -1847,7 +1854,7 @@ namespace Chroma
       // Unwrap the args...
       ExpClovTriang<REALT>* tri = arg->tri;
       ExpClovTriang<REALT>* tri_out = arg->tri_out;
-      double mclov=  (arg->mclov).elem().elem().elem().elem();
+      double diag_mass = (arg->diag_mass).elem().elem().elem().elem();
 
       int cb = arg->cb;
       const int n = 2 * Nc;
@@ -1857,8 +1864,8 @@ namespace Chroma
          int site = rb[cb].siteTable()[ssite];
 
         //need to pass the reference to tr_Minv
-         siteApplicationExpPack<REALT,0>(tri_out[site],tri[site],inv, mclov);
-         siteApplicationExpPack<REALT,1>(tri_out[site],tri[site],inv, mclov);
+         siteApplicationExpPack<REALT,0>(tri_out[site],tri[site],inv, diag_mass);
+         siteApplicationExpPack<REALT,1>(tri_out[site],tri[site],inv, diag_mass);
 
       }
       END_CODE();
@@ -1892,8 +1899,8 @@ namespace Chroma
 	int site = rb[cb].siteTable()[ssite];
 	RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
 	const RComplex<REALT>* const ppsi =
-	  (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
+	  (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0)); 
+        const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
 	siteApplicationExp<REALT, inv>(ddiag_mass,cchi, tri[site], ppsi);
       }
       END_CODE();
@@ -2091,11 +2098,11 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    Real mclov= RealT(Nd) + param.Mass;
-    if(inverse==1)
-        mclov= 1.0/mclov ;
+    //Real diag_mass = RealT(Nd) + param.Mass;
+    //if(inverse==1)
+    //    diag_mass = 1.0/diag_mass ;
 
-    QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,mclov};//,tr_M};
+    QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,diag_mass};//,tr_M};
     int num_sites = rb[cb].siteTable().size();
 
 
@@ -2178,8 +2185,7 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    RealT inv_diag_mass=1.0/diag_mass;
-    QDPExpCloverEnv::ApplyArgs<T> arg = {inv_diag_mass,chi, psi, tri, cb};
+    QDPExpCloverEnv::ApplyArgs<T> arg = {diag_mass,chi, psi, tri, cb};
     int num_sites = rb[cb].siteTable().size();
 
     // The dispatch function is at the end of the file
