@@ -409,7 +409,6 @@ TEST_F(ExpClovFixture, CheckApplyInv)
 
 }
 
-#if 1 //must be fixed for jit exp-clover
 TEST_F(ExpClovFixture, CheckApplyExpClov)
 {
   LatticeFermion src, res, res2, dummy, diff;
@@ -426,22 +425,20 @@ TEST_F(ExpClovFixture, CheckApplyExpClov)
   eclov.makeExpClov(PLUS,0,0);
   eclov.makeExpClov(PLUS,1,0);
 
-  //eclov.printExpClov();
-
   for (int cb = 0; cb < 2; ++cb)
   {
     eclov.apply(res2, src, PLUS, cb);
-    eclov.applyExpClov(dummy, src, PLUS, cb);
-    res[rb[cb]] = dummy;
+    eclov.applyExpClov(res, src, PLUS, cb);
   }
 
+
   diff = res-res2;
-  Double normdiff = sqrt(norm2(diff) / norm2(src));
+  Double normdiff = sqrt(norm2(diff) / norm2(res));
   QDPIO::cout << "Diff  = " << normdiff << "\n";
 
   ASSERT_LT(toDouble(normdiff), 1.0e-14);
   }
-#endif 
+
 
 #if 0 //must be fixed for jit version. It requires setting N_exp = 1 in the exp_clover_term...
 TEST_F(ExpClovFixture, CheckOpExpClov)
@@ -486,7 +483,6 @@ TEST_F(ExpClovFixture, CheckOpExpClov)
 }
 #endif 
 
-#if 1 //must be fixed for jit exp-clover
 TEST_F(ExpClovFixture, CheckApplyInvExpClov)
 {
   LatticeFermion src, res, res2, dummy,diff;
@@ -504,20 +500,20 @@ TEST_F(ExpClovFixture, CheckApplyInvExpClov)
   eclov.makeExpClov(PLUS,0,0);
   eclov.makeExpClov(PLUS,1,0);
 
-  inv_eclov.makeExpClov(PLUS,0,0);
+  inv_eclov.makeExpClov(PLUS,0,0);  //inv_eclov was created as inverse
   inv_eclov.makeExpClov(PLUS,1,0);
 
   for (int cb = 0; cb < 2; ++cb)
   {
-    inv_eclov.applyExpClov(res, src, PLUS, cb);
-    eclov.applyExpClov(res2, res, PLUS, cb);
+    eclov.applyExpClov(res2, src, PLUS, cb);
+    inv_eclov.applyExpClov(res, res2, PLUS, cb);
   }
 
-  diff = src-res2;
-  Double normdiff = sqrt(norm2(diff) / norm2(src));
+  diff = res-src;
+  Double normdiff = sqrt(norm2(diff) / norm2(res));
   QDPIO::cout << "Diff  = " << normdiff << "\n";
 
   ASSERT_LT(toDouble(normdiff), 1.0e-14);
   }
-#endif
+
 

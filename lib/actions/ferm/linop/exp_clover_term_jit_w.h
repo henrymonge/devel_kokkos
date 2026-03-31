@@ -386,6 +386,8 @@ namespace Chroma
 
     void applySite(T& chi, const T& psi, enum PlusMinus isign, int site) const;
 
+    void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
+
     void makeExpClov(enum PlusMinus isign, int cb, int inverse);
  
     void deriv(multi1d<U>& ds_u,
@@ -461,11 +463,13 @@ namespace Chroma
 
     OLattice<PComp<PTriDia<RScalar <WORD<REALT> > > > >  tri_dia;
     OLattice<PComp<PTriOff<RComplex<WORD<REALT> > > > >  tri_off;    
+    OLattice<PComp<PTriDia<RScalar <WORD<REALT> > > > >  exp_tri_dia;
+    OLattice<PComp<PTriOff<RComplex<WORD<REALT> > > > >  exp_tri_off;
     OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc;
     OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv; 
     OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
     multi3d<LatticeDouble> C_arr; // Fill this out during create;
-    RealT diag_mass;
+    OScalar<  PScalar< PScalar< RScalar< Word< REALT> > > > > diag_mass;
 
   };
 
@@ -759,7 +763,10 @@ namespace Chroma
       param.clovCoeffR *= Real(0.5) * ff / diag_mass;
       param.clovCoeffT *= Real(0.5) / diag_mass;
     }
-    
+   
+    if (inv_op==1)
+        diag_mass = 1.0/diag_mass;
+ 
     /* Calculate F(mu,nu) */
     //multi1d<LatticeColorMatrix> f;
     //mesField(f, u);
@@ -1285,6 +1292,252 @@ namespace Chroma
     END_CODE();
   }
 
+#if 1
+
+  template<typename RealT, typename X,typename Y, typename Q>
+  void function_make_exp_tri_clov_exec(JitFunction& function,
+                const RealT& diag_mass,
+                const X& exp_tri_dia,
+                const Y& exp_tri_off,
+				const X& tri_dia,
+				const Y& tri_off,
+                const Q& qc,
+				const Subset& s)
+  {
+#ifdef QDP_DEEP_LOG
+    function.type_W = typeid(REAL).name();
+    function.set_dest_id( chi.getId() );
+    function.set_is_lat(true);
+#endif
+   
+    AddressLeaf addr_leaf(s);
+
+    forEach(diag_mass, addr_leaf, NullCombine());
+    forEach(exp_tri_dia, addr_leaf, NullCombine());
+    forEach(exp_tri_off, addr_leaf, NullCombine());
+    forEach(tri_dia, addr_leaf, NullCombine());
+    forEach(tri_off, addr_leaf, NullCombine());
+    forEach(qc, addr_leaf, NullCombine());
+
+    int th_count = s.numSiteTable();
+    WorkgroupGuardExec workgroupGuardExec(th_count);
+
+    std::vector<QDPCache::ArgKey> ids;
+    workgroupGuardExec.check(ids);
+    ids.push_back( s.getIdSiteTable() );
+    for(unsigned i=0; i < addr_leaf.ids.size(); ++i) 
+      ids.push_back( addr_leaf.ids[i] );
+    jit_launch(function,th_count,ids);
+
+  }
+
+
+
+   template<typename REALT, typename X,typename Y, int block>
+   inline RComplexREG<WordREG<REALT> > A_ij(int row, int col, X& tri_dia_r,
+                                            Y& tri_off_r)
+    {
+
+    RComplexREG<WordREG<REALT> > ret_val;
+
+    if (row == col)
+    {
+      ret_val = tri_dia_r.elem(block).elem(row);
+    }
+    else if (row > col)
+    {
+      // Lower triangular portion
+      ret_val = tri_off_r.elem(block).elem((row * (row - 1)) / 2 + col);
+    }
+    else if (row < col)
+    {
+      // Upper triangular portion: transpose ( row <-> col) and conjugate
+      ret_val = conj(tri_off_r.elem(block).elem((col * (col - 1)) / 2 + row));
+    }
+
+    return ret_val;
+      }
+
+   template<typename REALT, typename X,typename Y, int block>
+   inline void A_ij_ins(int row, int col,RComplexREG<QDP::WordREG<REALT> > val, X& tri_dia_r,
+                                            Y& tri_off_r)
+    {
+
+    if (row == col)
+    {
+       tri_dia_r.elem(block).elem(row)=RScalarREG<WordREG<REALT> >(real(val));
+    }
+    else if (row > col)
+    {
+      // Lower triangular portion
+      tri_off_r.elem(block).elem((row * (row - 1)) / 2 + col)=val;
+    }
+    else if (row < col)
+    {
+      // Upper triangular portion: transpose ( row <-> col) and conjugate
+      tri_off_r.elem(block).elem((col * (col - 1)) / 2 + row)=conj(val);
+    }
+
+    }
+
+      // Simple mat mult routine
+      template<typename REALT, typename X,typename Y, int block>
+      inline void multiply(X& tri_dia_r_out,Y& tri_off_r_out, X& tri_dia_r_1,Y& tri_off_r_1,
+                           X& tri_dia_r_2,Y& tri_off_r_2)
+      {
+
+    // NB: We only need to compute the diagonal and lower diagonal
+    // elements because the matrices are hermitiean.
+    for (int row = 0; row < 6; ++row)
+    {
+      for (int col = 0; col <= row; ++col)
+      {
+        // Pour row down column
+        RComplexREG<WordREG<REALT> > dotprod; // = zip;
+        dotprod.real() = 0;
+        dotprod.imag() =0;
+        for (int k = 0; k < 6; ++k)
+        {
+            dotprod += A_ij<REALT,X,Y,block>(row,k,tri_dia_r_1,tri_off_r_1) * A_ij<REALT,X,Y,block>(k,col,tri_dia_r_2,tri_off_r_2);
+        }
+        //out.insert(row, col, dotprod);
+        A_ij_ins<REALT,X,Y,block>(row, col,dotprod, tri_dia_r_out,tri_off_r_out);
+      }
+    }
+
+      }
+
+
+  template<typename RealT, typename X,typename Y, typename Q>
+  void function_make_exp_tri_clov_build( JitFunction& function,
+                  const RealT& diag_mass,
+                  const X& exp_tri_dia,
+                  const Y& exp_tri_off,
+				  const X& tri_dia,
+				  const Y& tri_off,
+                  const Q& qc,
+				  const Subset& s)
+  {
+    llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
+
+    WorkgroupGuard workgroupGuard;
+    ParamRef p_site_table = llvm_add_param<int*>();
+
+    ParamLeafScalar param_leaf;
+
+    typedef typename WordType<RealT>::Type_t REALT;
+
+    typedef typename LeafFunctor<RealT, ParamLeafScalar>::Type_t  RealTJIT;
+    RealTJIT diag_mass_jit(forEach(diag_mass, param_leaf, TreeCombine()));
+
+    typedef typename LeafFunctor<X, ParamLeafScalar>::Type_t  XJIT;
+    XJIT exp_tri_dia_jit(forEach(exp_tri_dia, param_leaf, TreeCombine()));
+    typename REGType< typename XJIT::Subtype_t >::Type_t exp_tri_dia_r;
+
+    typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
+    YJIT exp_tri_off_jit(forEach(exp_tri_off, param_leaf, TreeCombine()));
+    typename REGType< typename YJIT::Subtype_t >::Type_t exp_tri_off_r;
+
+    XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
+    typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_r;
+
+
+    YJIT tri_off_jit(forEach(tri_off, param_leaf, TreeCombine()));
+    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_r;;
+
+
+    typename REGType< typename XJIT::Subtype_t >::Type_t tmp_tri_dia_r;
+    typename REGType< typename YJIT::Subtype_t >::Type_t tmp_tri_off_r;
+
+    typename REGType< typename XJIT::Subtype_t >::Type_t curr_tri_dia_r;
+    typename REGType< typename YJIT::Subtype_t >::Type_t curr_tri_off_r;
+
+    typedef typename REGType< typename XJIT::Subtype_t >::Type_t TRIDIA_R;
+    typedef typename REGType< typename YJIT::Subtype_t >::Type_t TRIOFF_R;
+
+    typedef typename LeafFunctor<Q, ParamLeafScalar>::Type_t  QJIT;
+    QJIT qc_jit(forEach(qc, param_leaf, TreeCombine()));
+    typename REGType< typename QJIT::Subtype_t >::Type_t qc_r;
+
+    llvm::Value* r_idx_thread = llvm_thread_idx();
+
+    workgroupGuard.check(r_idx_thread);
+
+    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
+
+
+    typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
+    diag_mass_reg.setup_value( diag_mass_jit.elem() );
+
+    auto exp_tri_dia_j = exp_tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+    auto exp_tri_off_j = exp_tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+
+    tri_dia_r.setup( tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+    tri_off_r.setup( tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+
+    qc_r.setup( qc_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+
+    //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+    int pow_max=5;
+    if (N_exp_default <5)
+       pow_max=N_exp_default;
+   
+    
+    RScalarREG<QDP::WordREG<REALT>> qi[2][6];
+
+    for(int block=0; block < 2; block++) 
+    {
+      for (int i = 0; i < 6; i++)
+          qi[block][i] = diag_mass_reg.elem().elem()*qc_r.elem(block).elem(i);
+
+      //Set the output clov triang to 1+A (power 1)
+      for (int c=0; c < 2*Nc ;c++){
+          exp_tri_dia_r.elem(block).elem(c)=qi[block][0];
+          tmp_tri_dia_r.elem(block).elem(c)= tri_dia_r.elem(block).elem(c);
+
+      }
+     //Add the off-diagonal entries
+      for (int c=0; c < 2*Nc*Nc-Nc; c++){
+        tmp_tri_off_r.elem(block).elem(c)=tri_off_r.elem(block).elem(c);
+  
+      }
+    }
+   
+      for (int pow = 1;pow <= pow_max; pow++)
+      {
+
+          for (int block = 0; block < 2; block++)
+          {
+                //Add the diagonal entries
+            for (int c=0; c < 2*Nc ;c++){
+                exp_tri_dia_r.elem(block).elem(c)+=qi[block][pow]*tmp_tri_dia_r.elem(block).elem(c);
+                curr_tri_dia_r.elem(block).elem(c)= tmp_tri_dia_r.elem(block).elem(c);
+            }
+
+            for (int c=0;c <2*Nc*Nc-Nc;c++){
+                if(pow==1){
+                    exp_tri_off_r.elem(block).elem(c)=qi[block][pow]*tmp_tri_off_r.elem(block).elem(c);
+                }else{
+                    exp_tri_off_r.elem(block).elem(c)+=qi[block][pow]*tmp_tri_off_r.elem(block).elem(c);
+                }
+                curr_tri_off_r.elem(block).elem(c)=tmp_tri_off_r.elem(block).elem(c);
+            } 
+
+          }
+          multiply<REALT,TRIDIA_R,TRIOFF_R,0>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
+          multiply<REALT,TRIDIA_R,TRIOFF_R,1>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
+      }
+
+    exp_tri_dia_j= exp_tri_dia_r;
+    exp_tri_off_j= exp_tri_off_r;
+
+
+    jit_get_function(function);
+  }
+
+#endif
+
+
   template<typename RealT,typename T, typename X,typename Y, typename Q>
   void function_apply_exp_clov_exec(JitFunction& function,
                 const RealT& diag_mass,
@@ -1422,8 +1675,7 @@ namespace Chroma
     //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
     int pow_max=5;
     if (N_exp_default <5)
-       pow_max=N_exp_default;
-   
+       pow_max=N_exp_default;  
 
     int n = 2*Nc;
     for(int cspin = 0; cspin < n; ++cspin)
@@ -1592,6 +1844,47 @@ namespace Chroma
     END_CODE();
 
   }
+
+
+  template <typename T, typename U,int N_exp>
+  void JITExpCloverTermT<T,U,N_exp>::applyExpClov(T& chi, const T& psi, enum PlusMinus isign,
+                        int cb) const
+  { 
+  
+    START_CODE();
+           
+    if (Ns != 4)
+    {
+      QDPIO::cerr << __func__ << ": ExpCloverTerm::apply requires Ns==4" << std::endl;
+      QDP_abort(1); 
+    }      
+    static JitFunction function;
+#if 0
+    if (function.empty())
+      function_apply_exp_clov_build( function, diag_mass,  chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
+    // Execute the function
+    function_apply_exp_clov_exec(function, diag_mass, chi, psi, exp_tri_dia, exp_tri_off,qc, rb[cb] );
+
+#else
+    
+    if (function.empty()){
+      //function_apply_exp_clov_build( function, diag_mass,  chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
+      function_apply_clov_build( function, chi, psi, exp_tri_dia, exp_tri_off, rb[cb] );
+    }
+
+    // Execute the function
+    function_apply_clov_exec( function, chi, psi, exp_tri_dia, exp_tri_off, rb[cb] );
+    //function_apply_exp_clov_exec( function, diag_mass, chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
+
+#endif
+
+    (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
+
+    END_CODE();
+
+  }
+
+
 
   template<typename T, typename W>
   void function_apply_coeff_exec(JitFunction& function,
@@ -1882,46 +2175,45 @@ namespace Chroma
     QDP_error_exit("JITExpCloverTermT<T,U>::applySite(T& chi, const T& psi,..) not implemented ");
   }
 
-  //template <typename T, typename U, int N_exp>
+
   template <typename T, typename U,int N_exp>
-  //void JITExpCloverTermT<T, U, N_exp>::makeExpClov(enum PlusMinus isign,
-  //                       int cb, int inverse)
   void JITExpCloverTermT<T,U,N_exp>::makeExpClov(enum PlusMinus isign,
                          int cb, int inverse)
   {
-#ifndef QDP_IS_QDPJIT
     START_CODE();
 
     if (Ns != 4)
     {
-      QDPIO::cerr << __func__ << ": CloverTerm::apply requires Ns==4" << std::endl;
+      QDPIO::cerr << __func__ << ": ExpCloverTerm::apply requires Ns==4" << std::endl;
       QDP_abort(1);
     }
 
-    Real mclov= RealT(Nd) + param.Mass;
-    if(inverse==1){
-        mclov= 1.0/mclov ;
-        //QDPIO::cout << "\nmclov^-1 = " << mclov<<"\n";
+    Real mclov;
+
+
+    static JitFunction function;
+    T dummy;
+
+
+    if (inverse==0){
+        if (function.empty())
+          function_make_exp_tri_clov_build(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
+
+        // Execute the function
+        function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
     }else{
-        //QDPIO::cout << "\nmclov = " << mclov<<"\n";
+        RealT inv_diag_mass = 1.0 /diag_mass;
+        //diag_mass=1.0/diag_mass;       
+        function_make_exp_tri_clov_build(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
+
+        // Execute the function
+        function_make_exp_tri_clov_exec(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
     }
 
-    //mclov= 1.0;
-    QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,mclov};//,tr_M};
-    int num_sites = rb[cb].siteTable().size();
 
-
-    // The dispatch function is at the end of the file
-    // ought to work for non-threaded targets too...
-    if (inverse==1){
-        dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T, 1>);
-    }else{
-        dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T, 0>);
-    }
-    //(*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
-#endif
+
   }
 
   //! Take deriv of D
