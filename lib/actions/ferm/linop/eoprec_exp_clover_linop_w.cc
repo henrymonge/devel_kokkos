@@ -4,7 +4,7 @@
 
 #include "actions/ferm/linop/eoprec_exp_clover_linop_w.h"
 
-//#if ! defined(BUILD_JIT_CLOVER_TERM)
+
 
 namespace Chroma 
 { 
@@ -32,24 +32,17 @@ namespace Chroma
     //clov. makeExpClov(PLUS,0);
     //makeExpClov(PLUS,1);
 
-#ifndef QDP_IS_QDPJIT 
-    //invclov.create(fs,param,clov);  // make a copy
-    invclov.createInv(fs,param,clov);  // make a copy
-#else
-    invclov.createInv(fs,param,clov);  // make a copy
-    //invclov.choles(0);
-#endif
+ 
+    invclov.create(fs,param,clov);  // make a copy
 
-    //invclov.choles(0);
-
-#ifndef QDP_IS_QDPJIT
-    //invclov.choles(0);  // invert the cb=0 part
+#if 1
+    invclov.choles(0);  // invert the cb=0 part
 #else
-//        invclov.makeExpClov(PLUS,0,0);
-//        invclov.makeExpClov(PLUS,1,0);
+        invclov.makeExpClov(PLUS,0,0);
+        invclov.makeExpClov(PLUS,1,0);
         
-//        invclov.makeExpClov(MINUS,0,1);
-//        invclov.makeExpClov(MINUS,1,1);
+        invclov.makeExpClov(MINUS,0,1);
+        invclov.makeExpClov(MINUS,1,1);
 #endif
 
 
@@ -74,7 +67,6 @@ namespace Chroma
 
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 1);
-    //chi *= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -93,7 +85,6 @@ namespace Chroma
     // Nuke for testing
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 0);
-    //chi *= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -111,7 +102,6 @@ namespace Chroma
     swatch.reset(); swatch.start();
 
     clov.applyInv(chi, psi, isign, 0);
-    chi /= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -186,7 +176,6 @@ namespace Chroma
 
     swatch.reset(); swatch.start();
     clov.applyInv(tmp2, tmp1, isign, 0);   
-    tmp2 /= (Real(Nd) + param.Mass);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -196,7 +185,7 @@ namespace Chroma
     //  chi_o  =  A_oo  psi_o  -  tmp1_o
     swatch.reset(); swatch.start();
     clov.apply(chi, psi, isign, 1);
-    //chi *= (Real(Nd) + param.Mass);
+
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -229,11 +218,10 @@ namespace Chroma
     START_CODE();
     
     swatch.reset(); swatch.start();
-
     clov.deriv(ds_u, chi, psi, isign, 0);
     for (int mu = 0; mu < Nd; mu++)
     {
-      ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
+      ds_u[mu] *= (Real(Nd) + param.Mass);
     }
 
     swatch.stop();
@@ -255,7 +243,7 @@ namespace Chroma
 
     for (int mu = 0; mu < Nd; mu++)
     {
-      ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
+      ds_u[mu] *= (Real(Nd) + param.Mass);
     }
 
     swatch.stop();
@@ -271,20 +259,14 @@ namespace Chroma
   {
     START_CODE();
 
-#if 1   //This term should be zero for exp-clover
-    if( ds_u.size() != Nd ) {
-      ds_u.resize(Nd);
-    }
-    ds_u = zero;
-#else 
     //invclov.derivTrLn(ds_u, isign, 0);
     // Testing Odd Odd Term - get nothing from even even term
     clov.derivTrLn(ds_u, isign, 0);
     for (int mu = 0; mu < Nd; mu++)
     {
-      ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
+      ds_u[mu] *= (Real(Nd) + param.Mass);
     }
-#endif
+        
 
     END_CODE();
   }
@@ -299,7 +281,7 @@ namespace Chroma
     ds_u.resize(Nd);
     D.deriv(ds_u, chi, psi, isign, 0);
     for(int mu=0; mu < Nd; mu++) { 
-      ds_u[mu]  = Real(-0.5)*ds_u[mu];
+      ds_u[mu]  *= Real(-0.5);
     }
     END_CODE();
   }
@@ -315,7 +297,7 @@ namespace Chroma
 
     D.deriv(ds_u, chi, psi, isign, 1);
     for(int mu=0; mu < Nd; mu++) { 
-     ds_u[mu]  = Real(-0.5)*ds_u[mu];
+     ds_u[mu]  *= Real(-0.5);
     }
     END_CODE();
   }
@@ -330,12 +312,10 @@ namespace Chroma
     START_CODE();
 
     swatch.reset(); swatch.start();
-
     clov.deriv(ds_u, chi, psi, isign, 1);
-
     for (int mu = 0; mu < Nd; mu++)
     {
-      ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
+      ds_u[mu] *= (Real(Nd) + param.Mass);
     }
 
     swatch.stop();
@@ -355,7 +335,7 @@ namespace Chroma
     clov.derivMultipole(ds_u, chi, psi, isign, 1);
     for (int mu = 0; mu < Nd; mu++)
     {
-     ds_u[mu] = (Real(Nd) + param.Mass)*ds_u[mu];
+     ds_u[mu] *= (Real(Nd) + param.Mass);
     }
 
     swatch.stop();
@@ -377,12 +357,7 @@ namespace Chroma
   //! Get the log det of the even even part
   // BUt for now, return zero for testing.
   Double EvenOddPrecExpCloverLinOp::logDetEvenEvenLinOp(void) const  {
-    QDPIO::cout <<"invclov.cholesDet(0)=" << invclov.cholesDet(0) <<"\n"; 
-    return invclov.cholesDet(0);
-    //return clov.cholesDet(0);
 
+    return invclov.cholesDet(0);
   }
 } // End Namespace Chroma
-
-
-//#endif

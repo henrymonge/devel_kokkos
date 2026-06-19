@@ -2083,9 +2083,11 @@ namespace Chroma
   }
 
 
-#if 0
 #ifndef  BUILD_QUDA_DEVIFACE_CLOVER
+
+#if 0
   namespace QDPCloverEnv {
+
     template<typename R,typename TD,typename TO> 
     struct QUDAPackArgs { 
       int cb;
@@ -2146,8 +2148,10 @@ namespace Chroma
     }
   }
 
-  template<typename T, typename U>
-  void JITExpCloverTermT<T,U>::packForQUDA(multi1d<QUDAPackedClovSite<typename WordType<T>::Type_t> >& quda_array, int cb) const
+#endif
+
+  template <typename T, typename U,int N_exp>
+  void JITExpCloverTermT<T,U,N_exp>::packForQUDA(multi1d<QUDAPackedClovSite<typename WordType<T>::Type_t> >& quda_array, int cb) const
     {
       typedef typename WordType<T>::Type_t REALT;
       int num_sites = rb[cb].siteTable().size();
@@ -2158,14 +2162,12 @@ namespace Chroma
       StopWatch watch;
       watch.start();
 
-      QDPCloverEnv::QUDAPackArgs<REALT,TD,TO> args = { cb, quda_array , tri_dia , tri_off };
+      QDPCloverEnv::QUDAPackArgs<REALT,TD,TO> args = { cb, quda_array , exp_tri_dia , exp_tri_off };
       dispatch_to_threads(num_sites, args, QDPCloverEnv::qudaPackSiteLoop<REALT,TD,TO>);
 
       watch.stop();
       PackForQUDATimer::Instance().get() += watch.getTimeInMicroseconds();
     }
-
-#endif
 #endif
 
   template<typename T, typename U,int N_exp>
