@@ -11418,7 +11418,7 @@ namespace Chroma
 		    asTensorView(u[d])
 		      .kvslice_from_size({{'t', first_tslice + tfrom}}, {{'t', tsize}})
 		      .toComplex(), first_tslice + tfrom)
-		    .make_sure(none, dev, dist);
+		    .make_sure<COMPLEX>(none, dev, dist);
 	}
 
 	// Get the time-slice for colorvec
@@ -11613,6 +11613,18 @@ namespace Chroma
     multi1d<T> tomulti1d(const std::array<T, N>& v)
     {
       multi1d<T> r(v.size());
+      for (int i = 0; i < v.size(); ++i)
+	r[i] = v[i];
+      return r;
+    }
+
+    /// Return a std::vector from multi1d
+    /// \param v: multi1d to convert
+
+    template <typename T>
+    std::vector<T> tovector(const multi1d<T>& v)
+    {
+      std::vector<T> r(v.size());
       for (int i = 0; i < v.size(); ++i)
 	r[i] = v[i];
       return r;

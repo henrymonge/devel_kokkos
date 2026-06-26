@@ -79,11 +79,13 @@
 #include "meas/inline/hadron/inline_genprop_matelem_pt_colorvec_w.h"
 #include "meas/inline/hadron/inline_inverter_test_w.h"
 #include "meas/inline/hadron/inline_inverter_test_superb_w.h"
+#include "meas/inline/hadron/inline_corr_superb_w.h"
 #include "meas/inline/hadron/inline_mres_w.h"
 #include "meas/inline/hadron/inline_qpropqio_w.h"
 #include "meas/inline/hadron/inline_qpropadd_w.h"
 #include "meas/inline/hadron/inline_qpropdiff_w.h"
 #include "meas/inline/hadron/inline_qprop_matmul_w.h"
+#include "meas/inline/hadron/inline_summed_fourq_block_w.h"
 #include "meas/inline/hadron/inline_qqqNucNuc_w.h"
 #include "meas/inline/hadron/inline_stoch_meson_w.h"
 #include "meas/inline/hadron/inline_stoch_baryon_w.h"
@@ -211,6 +213,7 @@ namespace Chroma
 	success &= InlineQpropAddEnv::registerAll();
 	success &= InlineQpropDiffEnv::registerAll();
 	success &= InlineQpropMatMulEnv::registerAll();
+	success &= InlineSummedFourQBlockEnv::registerAll();
 	success &= InlineQQQNucNucEnv::registerAll();
 	success &= InlineBarSpecEnv::registerAll();
 //	success &= InlineSpectrumQllEnv::registerAll();
@@ -225,6 +228,9 @@ namespace Chroma
 	success &= InlineInverterTestEnv::registerAll();
 #ifdef BUILD_SB
 	success &= InlineInverterTestSuperbEnv::registerAll();
+#endif
+#ifdef BUILD_REDSTAR_DATALIB
+	success &= InlineCorrSuperbEnv::registerAll();
 #endif
 //	success &= InlineStochLaphQuarkEnv::registerAll();
 //	success &= InlineStochLaphBaryonEnv::registerAll();

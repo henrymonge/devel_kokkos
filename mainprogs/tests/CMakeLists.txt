@@ -31,6 +31,7 @@ set(ChromaSingleExecs
     t_temp_prec
     t_multishift_quda
     t_invmdagm_quda
+    t_summed_fourq_block_w
 )
 
 if( GMP_FOUND )

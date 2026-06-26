@@ -1015,6 +1015,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/inline/hadron/inline_qpropadd_w.h
 	meas/inline/hadron/inline_qpropdiff_w.h
 	meas/inline/hadron/inline_qprop_matmul_w.h
+	meas/inline/hadron/inline_summed_fourq_block_w.h
 	meas/inline/hadron/inline_qqqNucNuc_w.h
 	meas/inline/hadron/inline_stoch_baryon_w.h
 	meas/inline/hadron/inline_stoch_hadron_w.h
@@ -1781,9 +1782,10 @@ target_sources(chromalib PRIVATE
 	meas/inline/hadron/inline_inverter_test_w.cc 
 	meas/inline/hadron/inline_mres_w.cc 
 	meas/inline/hadron/inline_qpropqio_w.cc 
-	meas/inline/hadron/inline_qpropadd_w.cc 
-	meas/inline/hadron/inline_qpropdiff_w.cc 
-	meas/inline/hadron/inline_qprop_matmul_w.cc 
+	meas/inline/hadron/inline_qpropadd_w.cc
+	meas/inline/hadron/inline_qpropdiff_w.cc
+	meas/inline/hadron/inline_qprop_matmul_w.cc
+	meas/inline/hadron/inline_summed_fourq_block_w.cc
 	meas/inline/hadron/inline_qqqNucNuc_w.cc 
 	meas/inline/hadron/inline_stoch_baryon_w.cc 
 	meas/inline/hadron/inline_stoch_hadron_w.cc 
@@ -2015,6 +2017,7 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_create_colorvecs_superb.h
      meas/inline/hadron/inline_eigenvalues_superb_w.h
      meas/inline/hadron/inline_inverter_test_superb_w.h
+     meas/inline/hadron/inline_corr_superb_w.h
   )
   target_sources(chromalib PRIVATE 
      meas/inline/hadron/inline_disco_prob_defl_superb_w.cc
@@ -2026,6 +2029,7 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_create_colorvecs_superb.cc
      meas/inline/hadron/inline_eigenvalues_superb_w.cc
      meas/inline/hadron/inline_inverter_test_superb_w.cc
+     meas/inline/hadron/inline_corr_superb_w.cc
   )
   target_include_directories(chromalib PUBLIC ${SUPERBBLAS_DIR}/include)
   add_library(superbblas STATIC IMPORTED )
@@ -2055,6 +2059,14 @@ if( Chroma_ENABLE_SUPERBBLAS )
      else()
        target_link_libraries(primme INTERFACE BLAS::BLAS ${Chroma_extra_link_flags})
      endif()
+  endif()
+
+  if( Chroma_ENABLE_REDSTAR_DATALIB )
+     target_include_directories(chromalib PUBLIC ${REDSTAR_DATALIB_DIR}/include)
+     add_library(redstar-datalib STATIC IMPORTED )
+     set_target_properties( redstar-datalib PROPERTIES IMPORTED_LOCATION ${REDSTAR_DATALIB_DIR}/lib/libadat.a )
+     target_link_libraries(redstar-datalib INTERFACE QDPXX::qdp)
+     target_link_libraries(chromalib PUBLIC redstar-datalib )
   endif()
 
   if( QDP_BACKEND_ROCM OR Chroma_ENABLE_ROCM)
