@@ -432,7 +432,7 @@ public:
 		clov->create(fstate, invParam_.CloverParams);
 
 		// Don't recompute, just copy
-		invclov->create(fstate, invParam_.CloverParams);
+		invclov->createInv(fstate, invParam_.CloverParams,*clov);
 
 		QDPIO::cout <<solver_string<< "Inverting ExpCloverTerm" << std::endl;
 		//invclov->choles(0);
@@ -471,14 +471,14 @@ public:
         invclov->makeExpClov(PLUS,0,0);
         invclov->makeExpClov(PLUS,1,0);
 
-        invclov->makeExpClov(MINUS,0,1);
-        invclov->makeExpClov(MINUS,1,1);
+        invclov->makeExpClov(MINUS,0,0);
+        invclov->makeExpClov(MINUS,1,0);
 
         //invclov->cholesTest(0);
         //invclov->cholesTest(1);
 
-		invclov->packForQUDA(packed_invclov, 0, 1);
-		invclov->packForQUDA(packed_invclov, 1, 1);
+		invclov->packForQUDA(packed_invclov, 0, 0);
+		invclov->packForQUDA(packed_invclov, 1, 0);
 
 		loadCloverQuda(&(packed_clov[0]), &(packed_invclov[0]), &quda_inv_param);
 

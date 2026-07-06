@@ -437,6 +437,9 @@ namespace Chroma
     int getDiaId() const { return tri_dia.getId(); }
     int getOffId() const { return tri_off.getId(); }
 
+    int getExpDiaId() const { return exp_tri_dia.getId(); }
+    int getExpOffId() const { return exp_tri_off.getId(); }
+
   protected:
     //! Create the clover term on cb
     /*!
@@ -796,6 +799,7 @@ namespace Chroma
                    const CloverFermActParams& param_,
                    const JITExpCloverTermT<T,U>& from)
   {
+     QDPIO::cout << "Creating clover term\n";
      create(fs,param_,from,0);
   }
 
@@ -805,6 +809,7 @@ namespace Chroma
                    const CloverFermActParams& param_,
                    const JITExpCloverTermT<T,U>& from)
   {
+     QDPIO::cout << "Creating inverse\n";
      create(fs,param_,from,1);
   }
 
@@ -2162,6 +2167,8 @@ namespace Chroma
       StopWatch watch;
       watch.start();
 
+      QDPIO::cout << "Calling packForQUDA \n";
+
       QDPCloverEnv::QUDAPackArgs<REALT,TD,TO> args = { cb, quda_array , exp_tri_dia , exp_tri_off };
       dispatch_to_threads(num_sites, args, QDPCloverEnv::qudaPackSiteLoop<REALT,TD,TO>);
 
@@ -2204,7 +2211,7 @@ namespace Chroma
         // Execute the function
         function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
     }else{
-        RealT inv_diag_mass = 1.0 /diag_mass;
+        RealT inv_diag_mass = diag_mass;
         //diag_mass=1.0/diag_mass;       
         function_make_exp_tri_clov_build(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
 

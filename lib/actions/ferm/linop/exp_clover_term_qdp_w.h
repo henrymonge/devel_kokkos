@@ -248,9 +248,10 @@ namespace Chroma
           for (int i = 0; i < 6; i++)
             qi[i] = ((RScalar<REALT>) mclov)*tri_in.q[block][i];
       }else{
-          for (int i = 0; i < 6; i++)//{
+          for (int i = 0; i < 6; i++){
             qi[i] = ((RScalar<REALT>) mclov)*tri_in.qinv[block][i];//to check
-            //qi[i] = tri_in.qinv[block][i]/((RScalar<REALT>) mclov);}          
+            //qi[i] = tri_in.qinv[block][i]/(((RScalar<REALT>) mclov ) * ((RScalar<REALT>) mclov ));
+          }          
       }
  
       int pow_max=5;
@@ -968,11 +969,13 @@ namespace Chroma
       } // End site loop
     //QDPIO::cout << "copy tr_M("<<site<<")="<<tr_M.elem(site).elem().elem()<<std::endl;
     }
-
+    QDPIO::cout << "Created from copy"<<std::endl;
     END_CODE();
 #endif
   }
+#endif
 
+#if 0
   //! Creation routine
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
@@ -1068,6 +1071,15 @@ namespace Chroma
     RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
     diag_mass = 1 + (Nd - 1) * ff + param.Mass;
     
+    if (inv_op==1){
+       diag_mass = 1/( 1 + (Nd - 1) * ff + param.Mass);
+
+    }
+    else{
+        diag_mass =  1 + (Nd - 1) * ff + param.Mass;
+
+    }
+    
     {
       RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
       param.clovCoeffR *= Real(0.5) * ff / diag_mass;
@@ -1075,10 +1087,10 @@ namespace Chroma
     }
 
     
+    //diag_mass = 1/from.diag_mass;
 
-
-    if (inv_op==1)
-         diag_mass = 1.0/diag_mass;
+    //if (inv_op==1)
+    //     diag_mass = 1.0/diag_mass;
     /* Calculate F(mu,nu) */
     // multi1d<LatticeColorMatrix> f;
     // mesField(f, u);
@@ -1132,11 +1144,13 @@ namespace Chroma
       } // End site loop
 
     }
+     QDPIO::cout << "Diag mass " << diag_mass.elem().elem().elem().elem()<< "\n";
 
     END_CODE();
 #endif
   }
 
+#if 1
   // Now copy
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
@@ -1146,7 +1160,7 @@ namespace Chroma
      QDPIO::cout << "Creating from copy\n";
      create(fs,param_,from,0);
   }
-
+#endif
   // Now copy and create inv
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::createInv(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
@@ -1164,7 +1178,7 @@ namespace Chroma
 					      const CloverFermActParams& param_)
   {
 #ifndef QDP_IS_QDPJIT
-    START_CODE();
+    START_CODE()
 
     u.resize(Nd);
 
@@ -2748,10 +2762,12 @@ namespace Chroma
       QDP_abort(1);
     }
 
-    Real mclov= RealT(Nd) + param.Mass;
-    if(inverse==1)
-        mclov= 1.0/mclov ; 
+    Real mclov= diag_mass; //RealT(Nd) + param.Mass;
+    //if(inverse==1)
+    //    mclov= 1.0/mclov ; 
 
+
+    QDPIO::cout << "Mclov " << mclov.elem().elem().elem().elem()<< "\n";
     QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,mclov};
     int num_sites = rb[cb].siteTable().size();
 

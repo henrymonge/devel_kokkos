@@ -454,8 +454,8 @@ namespace Chroma
             //invclov->cholesTest(0);
             //invclov->cholesTest(1);
 
-			invclov->packForQUDA(packed_invclov, 0, 1);
-			invclov->packForQUDA(packed_invclov, 1, 1);
+			invclov->packForQUDA(packed_invclov, 0, 0);
+			invclov->packForQUDA(packed_invclov, 1, 0);
 
 			loadCloverQuda(&(packed_clov[0]), &(packed_invclov[0]), &quda_inv_param);
 
