@@ -6,6 +6,7 @@
 
 #include "meas/inline/hadron/inline_summed_fourq_block_w.h"
 #include "meas/inline/abs_inline_measurement_factory.h"
+#include "util/ft/sftmom.h"
 #include "meas/inline/io/named_objmap.h"
 #include <sstream>
 
@@ -111,6 +112,59 @@ namespace Chroma
           }
         }
       }
+
+
+      //! Apply each requested operator to the full set of s1,s2 block propagators.
+      //! The actual contraction for each operator is a placeholder to be filled in.
+      //contract_sigma_delta(rho_gamma_blocks,params.named_obj.operators,T1-T3,s1,s2);
+      void contract_sigma_delta(multi1d<LatticeSpinMatrix>& rho_gamma_blocks,
+                                          const multi1d<std::string>& operators,
+                                          LatticeSpinMatrix diquark_block,
+                                          int s1, int s2)
+      {
+
+        LatticeComplex result=zero;
+        for (int i = 0; i < operators.size(); ++i)
+        {
+          const std::string& op = operators[i];
+
+          switch (parseFourQOperator(op))
+          {
+          case OP_VV:
+            // TODO: Vector-Vector operator contraction
+            for(int mu=0;mu < Nd; ++mu){
+               int gamma_index = 1 << mu;
+               result += traceSpin(Gamma(gamma_index)*diquark_block);
+            }
+            break;
+
+          case OP_AA:
+            // TODO: Axial-Axial operator contraction
+            for(int mu=0;mu < Nd; ++mu){
+               int gamma_index = 1 << mu;
+               result += traceSpin(Gamma(15)*(Gamma(gamma_index)*diquark_block));
+            }            
+            break;
+
+          case OP_SS:
+            //Scalar-Scalar operator contraction
+            //Multiplies by identity, so just do the trace
+            result = traceSpin(diquark_block);
+            break;
+
+          case OP_PP:
+            // TODO: Pseudoscalar-Pseudoscalar operator contraction
+            result = traceSpin(Gamma(15)*diquark_block);   
+            break;
+
+          default:
+            QDPIO::cerr << name << ": unrecognized operator \"" << op << "\"" << std::endl;
+            QDP_abort(1);
+          }
+          pokeSpin(rho_gamma_blocks[i],result,s1,s2);
+        }
+      } 
+
 
       //! Extract the insertion-position list already recorded on a propagator's record XML.
       //! Returns an empty list if none is present yet (first contribution, or a record
@@ -293,6 +347,7 @@ namespace Chroma
 
       ColorMatrix Ic;
       Ic = 1;
+      int nOps=params.named_obj.operators.size();
 
       /*The pion matrix element <pi+(x)|Gamma_1*Gamma_2(y)|pi-(z)>:ME
        *Indices: Gamma_1:G1[delta,sigma], Gamma_2:G2[gamma,rho]
@@ -315,6 +370,10 @@ namespace Chroma
       LatticeSpinMatrix T1,T3;
       LatticePropagator prop_out;
       LatticeComplex tmpCplx;
+      multi1d<LatticeSpinMatrix> rho_gamma_blocks;
+
+      rho_gamma_blocks.resize(nOps);
+
       for (int s1 = 0; s1 < Ns; ++s1) //rho loop
         {
           for (int s2 = 0; s2 < Ns; ++s2){ //gamma 
@@ -354,6 +413,8 @@ namespace Chroma
             T3 = T3_yz* peekSpin(T3_xy, s1, s2);
             prop_out = (T1 - T3) * Ic;
 
+            //contract_sigma_delta=
+            contract_sigma_delta(rho_gamma_blocks,params.named_obj.operators,T1-T3,s1,s2);
             // Pick up the insertion positions already recorded for this key (if any),
             // and append the position used for this contribution.
             // NB: multi1d::resize() discards existing contents (it is not a realloc),
@@ -411,6 +472,13 @@ namespace Chroma
             }
           }//ends s2 loop
         }//ends s1 loop
+
+      //SftMom phases_nomom(0, true, Nd -1);
+      //Do the final contractions for the operator
+      //  rho_gamma_block
+      // corr_t[t] = sum over all spatial sites at timeslice t, no momentum phase
+
+      //multi1d<DComplex> corr_t = sumMulti(traceSpin(rho_gamma_block), phases_nomom.getSet());
 
       //applyOperators(params.named_obj.operators, prop_outs);
 
