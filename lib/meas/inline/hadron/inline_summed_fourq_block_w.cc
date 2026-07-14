@@ -145,6 +145,29 @@ namespace Chroma
       }
     }
 
+      bool positionAlreadySummed(const multi1d< multi1d<int> >& positions,
+                                 const multi1d<int>& pos)
+      {
+        for (int i = 0; i < positions.size(); ++i)
+        {
+          if (positions[i].size() != pos.size())
+            continue;
+
+          bool same = true;
+          for (int mu = 0; mu < pos.size(); ++mu)
+          {
+            if (positions[i][mu] != pos[mu])
+            {
+              same = false;
+              break;
+            }
+          }
+          if (same)
+            return true;
+        }
+        return false;
+      }
+
     //! Register all the factories
     bool registerAll()
     {
@@ -268,8 +291,6 @@ namespace Chroma
 
       Propagator srcProp = peekSite(Pyz, coord);
 
-      QDPIO::cout << "Src prop tmp: "<<Pyz.elem(0).elem(0,0).elem(0,0).real() << std::endl;
-
       ColorMatrix Ic;
       Ic = 1;
 
@@ -294,36 +315,15 @@ namespace Chroma
       LatticeSpinMatrix T1,T3;
       LatticePropagator prop_out;
       LatticeComplex tmpCplx;
-      //multi2d<LatticePropagator> prop_outs(Ns, Ns);
-
       for (int s1 = 0; s1 < Ns; ++s1) //rho loop
         {
           for (int s2 = 0; s2 < Ns; ++s2){ //gamma 
 
-            for (int s3 = 0; s3 < Ns; ++s3){ //sigma 
-               for (int s4 = 0; s4 < Ns; ++s4)//delta
-              {
-                  tmpCplx=traceColor(peekSpin( B1,s1,s4)*peekSpin(B2, s3, s2));
-       		  pokeSpin(T1,tmpCplx,s3,s4);	           
-	      }
-            }
-
-
-            T3 = T3_yz* peekSpin(T3_xy, s1, s2);//+T3_xy* peekSpin(T3_yz, s1, s2); //The second has the flipped indices
-            prop_out = (T1 - T3) * Ic;
-
-            //prop_outs(s1, s2) = prop_out;
-
             std::ostringstream key;
-            key << params.named_obj.result_id
-                << "_s1_"   << s1
-                << "_s2_"   << s2;
+            key << params.named_obj.result_id << "_s1_" << s1 << "_s2_" << s2;
             std::string prop_key = key.str();
 
-            // Pick up the insertion positions already recorded for this key (if any),
-            // and append the position used for this contribution.
-            // NB: multi1d::resize() discards existing contents (it is not a realloc),
-            // so the grown array is built fresh rather than resized in place.
+            // Pick up the insertion positions already recorded for this key (if any).
             bool exists = TheNamedObjMap::Instance().check(prop_key);
             multi1d< multi1d<int> > old_positions;
             if (exists)
@@ -333,6 +333,31 @@ namespace Chroma
               old_positions = readInsertionPositions(existing_record_xml);
               printPositions(prop_key, old_positions);
             }
+
+            // If this insertion position has already been summed into this key, skip it.
+            if (positionAlreadySummed(old_positions, params.named_obj.insertion_position))
+            {
+              QDPIO::cout << name << ": " << prop_key
+                          << " already contains insertion position, skipping" << std::endl;
+              continue;
+            }
+
+
+            for (int s3 = 0; s3 < Ns; ++s3){ //sigma 
+               for (int s4 = 0; s4 < Ns; ++s4)//delta
+              {
+                  tmpCplx=traceColor(peekSpin( B1,s1,s4)*peekSpin(B2, s3, s2));
+       		  pokeSpin(T1,tmpCplx,s3,s4);	           
+	          }
+            }
+
+            T3 = T3_yz* peekSpin(T3_xy, s1, s2);
+            prop_out = (T1 - T3) * Ic;
+
+            // Pick up the insertion positions already recorded for this key (if any),
+            // and append the position used for this contribution.
+            // NB: multi1d::resize() discards existing contents (it is not a realloc),
+            // so the grown array is built fresh rather than resized in place.
 
             multi1d< multi1d<int> > positions(old_positions.size() + 1);
             for (int i = 0; i < old_positions.size(); ++i)
