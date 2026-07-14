@@ -29,13 +29,12 @@ namespace Chroma
 
       unsigned long frequency;
 
-      multi1d<int> currents;    /*!< Gamma matrix indices for current insertion */
       bool         write_files; /*!< Write each prop_out to disk and erase from map */
 
       struct NamedObject_t
       {
-        multi1d<int> t_srce;          /*!< Source spacetime position */
-        multi1d<int> curr_insertion;  /*!< Current insertion spacetime position */
+        multi1d<int>         insertion_position; /*!< Current insertion spacetime position */
+        multi1d<std::string> operators;          /*!< Operator names for the current insertion */
         std::string  prop_xy_id;      /*!< Input propagator Pxy (x=sink, y=insertion) */
         std::string  prop_yz_id;      /*!< Input propagator Pyz (y=insertion, z=source) */
         std::string  result_id;       /*!< Output propagator stem */

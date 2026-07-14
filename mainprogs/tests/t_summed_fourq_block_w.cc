@@ -2,7 +2,7 @@
  *  \brief Unit tests for SUMMED_FOURQ_BLOCK inline measurement
  *
  *  Verifies that the measurement passes the propagator through unchanged and
- *  correctly reads t_srce / curr_insertion spacetime positions from XML.
+ *  correctly reads insertion_position / operators from XML.
  */
 
 #include "chroma.h"
@@ -31,15 +31,15 @@ namespace
   double runAndCheck(const std::string& prop_xy_id,
                      const std::string& prop_yz_id,
                      const std::string& result_id,
-                     const multi1d<int>& t_srce,
-                     const multi1d<int>& curr_insertion,
+                     const multi1d<int>& insertion_position,
+                     const multi1d<std::string>& operators,
                      const LatticePropagator& ref,
                      XMLWriter& xml_out)
   {
     InlineSummedFourQBlockEnv::Params p;
     p.frequency                   = 1;
-    p.named_obj.t_srce            = t_srce;
-    p.named_obj.curr_insertion    = curr_insertion;
+    p.named_obj.insertion_position = insertion_position;
+    p.named_obj.operators          = operators;
     p.named_obj.prop_xy_id        = prop_xy_id;
     p.named_obj.prop_yz_id        = prop_yz_id;
     p.named_obj.result_id         = result_id;
@@ -61,6 +61,14 @@ namespace
     multi1d<int> c(Nd);
     c[0] = x; c[1] = y; c[2] = z; c[3] = t;
     return c;
+  }
+
+  multi1d<std::string> makeOps(std::initializer_list<std::string> ops)
+  {
+    multi1d<std::string> v(ops.size());
+    int i = 0;
+    for (const auto& s : ops) v[i++] = s;
+    return v;
   }
 }
 
@@ -96,11 +104,11 @@ int main(int argc, char* argv[])
   storeInMap("test_prop", prop_in);
 
   // -----------------------------------------------------------------------
-  // Test 1: result must equal input (no scaling); t_srce at origin
+  // Test 1: result must equal input (no scaling); insertion_position at origin
   // -----------------------------------------------------------------------
   {
     double err = runAndCheck("test_prop", "test_prop", "test_result",
-                             makeCoord(0,0,0,0), makeCoord(1,0,0,0),
+                             makeCoord(0,0,0,0), makeOps({"G5"}),
                              prop_in, xml_out);
     QDPIO::cout << "TEST passthrough (origin): ||result - prop||^2 = " << err << std::endl;
     write(xml_out, "test_passthrough_origin_err", err);
@@ -117,11 +125,12 @@ int main(int argc, char* argv[])
   }
 
   // -----------------------------------------------------------------------
-  // Test 2: result must equal input; t_srce and curr_insertion at interior sites
+  // Test 2: result must equal input; insertion_position at an interior site
+  //         and operators with more than one entry
   // -----------------------------------------------------------------------
   {
     double err = runAndCheck("test_prop", "test_prop", "test_result",
-                             makeCoord(2,1,0,3), makeCoord(3,2,1,0),
+                             makeCoord(2,1,0,3), makeOps({"G5", "G1"}),
                              prop_in, xml_out);
     QDPIO::cout << "TEST passthrough (interior): ||result - prop||^2 = " << err << std::endl;
     write(xml_out, "test_passthrough_interior_err", err);
@@ -138,7 +147,7 @@ int main(int argc, char* argv[])
   }
 
   // -----------------------------------------------------------------------
-  // Test 3: factory path  (XML round-trip with t_srce / curr_insertion)
+  // Test 3: factory path  (XML round-trip with insertion_position / operators)
   // -----------------------------------------------------------------------
   {
     const std::string xml_str =
@@ -146,8 +155,8 @@ int main(int argc, char* argv[])
       "  <Name>SUMMED_FOURQ_BLOCK</Name>"
       "  <Frequency>1</Frequency>"
       "  <NamedObject>"
-      "    <t_srce>0 0 0 0</t_srce>"
-      "    <curr_insertion>1 0 0 0</curr_insertion>"
+      "    <insertion_position>0 0 0 0</insertion_position>"
+      "    <operators><elem>G5</elem></operators>"
       "    <prop_xy_id>test_prop</prop_xy_id>"
       "    <prop_yz_id>test_prop</prop_yz_id>"
       "    <result_id>test_result</result_id>"
@@ -185,16 +194,16 @@ int main(int argc, char* argv[])
 
   // -----------------------------------------------------------------------
   // Test 4: Params XML write/read round-trip
-  //   Ensures t_srce and curr_insertion survive serialisation
+  //   Ensures insertion_position and operators survive serialisation
   // -----------------------------------------------------------------------
   {
     InlineSummedFourQBlockEnv::Params p_orig;
-    p_orig.frequency                = 3;
-    p_orig.named_obj.t_srce         = makeCoord(1, 2, 3, 0);
-    p_orig.named_obj.curr_insertion = makeCoord(0, 1, 2, 3);
-    p_orig.named_obj.prop_xy_id     = "test_prop";
-    p_orig.named_obj.prop_yz_id     = "test_prop";
-    p_orig.named_obj.result_id      = "test_result2";
+    p_orig.frequency                  = 3;
+    p_orig.named_obj.insertion_position = makeCoord(1, 2, 3, 0);
+    p_orig.named_obj.operators          = makeOps({"G5", "G1", "G2"});
+    p_orig.named_obj.prop_xy_id       = "test_prop";
+    p_orig.named_obj.prop_yz_id       = "test_prop";
+    p_orig.named_obj.result_id        = "test_result2";
 
     XMLBufferWriter buf;
     push(buf, "TestParams");
@@ -208,11 +217,19 @@ int main(int argc, char* argv[])
     bool coords_match = true;
     for (int mu = 0; mu < Nd; ++mu)
     {
-      if (p_read.named_obj.t_srce[mu]         != p_orig.named_obj.t_srce[mu])         coords_match = false;
-      if (p_read.named_obj.curr_insertion[mu] != p_orig.named_obj.curr_insertion[mu]) coords_match = false;
+      if (p_read.named_obj.insertion_position[mu] != p_orig.named_obj.insertion_position[mu])
+        coords_match = false;
+    }
+
+    bool ops_match = (p_read.named_obj.operators.size() == p_orig.named_obj.operators.size());
+    if (ops_match)
+    {
+      for (int i = 0; i < p_orig.named_obj.operators.size(); ++i)
+        if (p_read.named_obj.operators[i] != p_orig.named_obj.operators[i]) ops_match = false;
     }
 
     bool ok = coords_match
+           && ops_match
            && (p_read.named_obj.prop_xy_id == p_orig.named_obj.prop_xy_id)
            && (p_read.named_obj.prop_yz_id == p_orig.named_obj.prop_yz_id)
            && (p_read.named_obj.result_id  == p_orig.named_obj.result_id);
