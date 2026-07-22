@@ -165,6 +165,51 @@ namespace Chroma
         }
       } 
 
+      //! Apply each requested operator to the full set of s1,s2 block propagators.
+      //! The actual contraction for each operator is a placeholder to be filled in.
+      //contract_sigma_delta(rho_gamma_blocks,params.named_obj.operators,T1-T3,s1,s2);
+      LatticeComplex contract_rho_gamma(const std::string& op,LatticeSpinMatrix rho_gamma_block)
+      {
+
+        LatticeComplex result=zero;
+ 
+          switch (parseFourQOperator(op))
+          {
+          case OP_VV:
+            // TODO: Vector-Vector operator contraction
+            for(int mu=0;mu < Nd; ++mu){
+               int gamma_index = 1 << mu;
+               result += traceSpin(Gamma(gamma_index)*rho_gamma_block);
+            }
+            break;
+
+          case OP_AA:
+            // TODO: Axial-Axial operator contraction
+            for(int mu=0;mu < Nd; ++mu){
+               int gamma_index = 1 << mu;
+               result += traceSpin(Gamma(15)*(Gamma(gamma_index)*rho_gamma_block));
+            }
+            break;
+
+          case OP_SS:
+            //Scalar-Scalar operator contraction
+            //Multiplies by identity, so just do the trace
+            result = traceSpin(rho_gamma_block);
+            break;
+
+          case OP_PP:
+            // TODO: Pseudoscalar-Pseudoscalar operator contraction
+            result = traceSpin(Gamma(15)*rho_gamma_block);
+            break;
+
+          default:
+            QDPIO::cerr << name << ": unrecognized operator \"" << op << "\"" << std::endl;
+            QDP_abort(1);
+          }
+          return result;
+
+      } 
+
 
       //! Extract the insertion-position list already recorded on a propagator's record XML.
       //! Returns an empty list if none is present yet (first contribution, or a record
@@ -480,7 +525,25 @@ namespace Chroma
 
       //multi1d<DComplex> corr_t = sumMulti(traceSpin(rho_gamma_block), phases_nomom.getSet());
 
-      //applyOperators(params.named_obj.operators, prop_outs);
+
+      SftMom phases_nomom(0, true, Nd - 1);
+
+      // Do the final contractions for the operators: trace over spin and
+      // sum over all spatial sites at each timeslice, no momentum phase.
+      LatticeComplex tmpME;
+      push(xml_out, "FourQCorrelators");
+      for (int i = 0; i < params.named_obj.operators.size(); ++i)
+      {
+        tmpME=contract_rho_gamma(params.named_obj.operators[i],rho_gamma_blocks[i]);
+        multi1d<DComplex> corr_t = sumMulti(tmpME, phases_nomom.getSet());
+
+        push(xml_out, "elem");
+        write(xml_out, "operator", params.named_obj.operators[i]);
+        write(xml_out, "corr_t", corr_t);
+        pop(xml_out);
+      }
+      pop(xml_out);
+
 
       QDPIO::cout << name << ": ran successfully" << std::endl;
 
