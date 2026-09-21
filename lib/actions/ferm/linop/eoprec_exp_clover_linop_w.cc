@@ -28,12 +28,16 @@ namespace Chroma
 
     clov.create(fs, param);
 
-
+    clov.makeExpClov(PLUS,0,0);
+    clov.makeExpClov(PLUS,1,0);
+      
     //clov. makeExpClov(PLUS,0);
     //makeExpClov(PLUS,1);
 
  
-    invclov.create(fs,param,clov);  // make a copy
+    invclov.createInv(fs,param,clov);  // make a copy
+    invclov.makeExpClov(PLUS,0,0);  //inv_eclov was created as inverse
+    invclov.makeExpClov(PLUS,1,0);
 
 #if 1
     invclov.choles(0);  // invert the cb=0 part
@@ -66,7 +70,8 @@ namespace Chroma
     START_CODE();
 
     swatch.reset(); swatch.start();
-    clov.apply(chi, psi, isign, 1);
+    //clov.apply(chi, psi, isign, 1);
+    clov.applyExpClov(chi, psi, isign, 1);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -84,8 +89,8 @@ namespace Chroma
 
     // Nuke for testing
     swatch.reset(); swatch.start();
-    clov.apply(chi, psi, isign, 0);
-
+    //clov.apply(chi, psi, isign, 0);
+    clov.applyExpClov(chi, psi, isign, 0);
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
     
@@ -101,7 +106,8 @@ namespace Chroma
 
     swatch.reset(); swatch.start();
 
-    clov.applyInv(chi, psi, isign, 0);
+    //clov.applyInv(chi, psi, isign, 0);
+    invclov.applyExpClov(chi, psi, isign, 0);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -175,7 +181,8 @@ namespace Chroma
     D.apply(tmp1, psi, isign, 0);
 
     swatch.reset(); swatch.start();
-    clov.applyInv(tmp2, tmp1, isign, 0);   
+    //clov.applyInv(tmp2, tmp1, isign, 0);   
+    invclov.applyExpClov(tmp2, tmp1, isign, 0); 
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -184,8 +191,8 @@ namespace Chroma
 
     //  chi_o  =  A_oo  psi_o  -  tmp1_o
     swatch.reset(); swatch.start();
-    clov.apply(chi, psi, isign, 1);
-
+    //clov.apply(chi, psi, isign, 1);
+    clov.applyExpClov(chi, psi, isign, 1);
 
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();

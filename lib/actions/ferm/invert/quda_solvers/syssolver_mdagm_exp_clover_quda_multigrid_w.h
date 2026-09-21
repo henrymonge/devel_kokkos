@@ -1,6 +1,6 @@
 // -*- C++ -*-
 /*! \file
- *  \QUDA MULTIGRID MdagM ExpClover solver.
+ *  \QUDA MULTIGRID MdagM Clover solver.
  */
 
 #ifndef __syssolver_mdagm_quda_multigrid_exp_clover_h__
@@ -318,7 +318,7 @@ public:
 
 		q_gauge_param.ga_pad = max_face;
 
-		// ExpClover precision and order
+		// Clover precision and order
 		quda_inv_param.clover_cpu_prec = cpu_prec;
 		quda_inv_param.clover_cuda_prec = gpu_prec;
 		quda_inv_param.clover_cuda_prec_sloppy = gpu_half_prec;
@@ -417,7 +417,6 @@ public:
 
 		if( invParam.verboseP ) {
 			quda_inv_param.verbosity = QUDA_VERBOSE;
-            //quda_inv_param.verbosity = QUDA_DEBUG_VERBOSE;
 		}
 		else {
 			quda_inv_param.verbosity = QUDA_SUMMARIZE;
@@ -432,7 +431,7 @@ public:
 		clov->create(fstate, invParam_.CloverParams);
 
 		// Don't recompute, just copy
-		invclov->createInv(fstate, invParam_.CloverParams,*clov);
+        invclov->createInv(fstate, invParam_.CloverParams,*clov);
 
 		QDPIO::cout <<solver_string<< "Inverting ExpCloverTerm" << std::endl;
 		//invclov->choles(0);
@@ -446,95 +445,32 @@ public:
 
 		packed_clov.resize(all.siteTable().size());
 
-        LatticeFermion src, resc, resc2, diff;
-        gaussian(src);
-        resc = zero;
-        resc2 = zero;
-        const auto& sub = QDP::all; //A->subset();
-
         clov->makeExpClov(PLUS,0,0);
         clov->makeExpClov(PLUS,1,0);
+
 
         clov->makeExpClov(MINUS,0,0);
         clov->makeExpClov(MINUS,1,0);
 
-		clov->packForQUDA(packed_clov, 0, 0);
-		clov->packForQUDA(packed_clov, 1, 0);
+        clov->packForQUDA(packed_clov, 0,0);
+        clov->packForQUDA(packed_clov, 1,0);
 
 		// Always need inverse
 		multi1d<QUDAPackedClovSite<REALT> > packed_invclov(all.siteTable().size());
 
-        //invclov->makeExpClov(PLUS,0,1);
-        //invclov->makeExpClov(PLUS,1,1);
-
-        //For testing exp as regular clover
         invclov->makeExpClov(PLUS,0,0);
         invclov->makeExpClov(PLUS,1,0);
 
         invclov->makeExpClov(MINUS,0,0);
         invclov->makeExpClov(MINUS,1,0);
 
-        //invclov->cholesTest(0);
-        //invclov->cholesTest(1);
+        QDPIO::cout<<"\n\n\nHere is the call for invclov->packForQUDA\n\n\n";
 
-		invclov->packForQUDA(packed_invclov, 0, 0);
-		invclov->packForQUDA(packed_invclov, 1, 0);
+        invclov->packForQUDA(packed_invclov, 0,0);
+        invclov->packForQUDA(packed_invclov, 1,0);
+
 
 		loadCloverQuda(&(packed_clov[0]), &(packed_invclov[0]), &quda_inv_param);
-
-//Check to compare with Chroma exp-clover op
-#if 0
-    //Check to compare with Chroma exp-clover op
-
-
-    resc = zero;
-    resc2 = zero;
-
-    void* spinorInc =(void *)&(src.elem(sub.start()).elem(0).elem(0).real());
-    void* spinorOutc =(void *)&(resc.elem(sub.start()).elem(0).elem(0).real());
-
-    int Ns2 = Ns / 2;
-
-    int num_sites = rb[0].siteTable().size();
-    QDPIO::cout << "\n\n";
-
-    cloverQuda(spinorOutc, spinorInc, (QudaInvertParam*)&quda_inv_param,(QudaParity) QUDA_EVEN_PARITY, 1);
-    invclov->applyExpClov(resc2, src, PLUS,0);
-
-    diff = resc-resc2;
-    Double normdiff = sqrt(norm2(diff) / norm2(resc));
-    QDPIO::cout << "mdagm_exp_clover_quda_multigrid Chroma-QUDA Diff  = " << normdiff << "\n\n";
-
-    resc = zero;
-    resc2 = zero;
-    //cloverQuda(spinorOutc, spinorInc, (QudaInvertParam*)&quda_inv_param,(QudaParity) QUDA_EVEN_PARITY, 1);
-
-    for (int cb = 0; cb < 2; ++cb)
-    {
-        invclov->applyExpClov(resc, src, PLUS,cb);
-        clov->applyExpClov(resc2, resc, PLUS,cb);
-    }
-    diff = resc2-src;
-    normdiff = sqrt(norm2(diff) / norm2(src));
-    QDPIO::cout << "mdagm_exp_clover_quda_multigrid Chroma-QUDA Diff2  = " << normdiff << "\n\n";
-
-    resc = zero;
-    resc2 = zero;
-    invclov->applyExpClov(resc, src, PLUS,0);
-    clov->applyExpClov(resc2, src, PLUS,0);
-
-    normdiff = sqrt(norm2(resc) / norm2(src));
-    QDPIO::cout << "invclov*src  = " << normdiff << "\n\n";
-
-    normdiff = sqrt(norm2(resc2) / norm2(src));
-    QDPIO::cout << "clov*src  = " << normdiff << "\n\n";
-
-    normdiff = sqrt(norm2(src));
-    QDPIO::cout << "src  = " << normdiff << "\n\n";
-
-#endif
-
-
 
 #else
 
@@ -543,10 +479,18 @@ public:
 		quda_inv_param.clover_location = QUDA_CUDA_FIELD_LOCATION;
 		quda_inv_param.clover_order = QUDA_QDPJIT_CLOVER_ORDER;
 
+        QDPIO::cout << "Debug: In here for MdagM" << std::endl;
+
+        clov->makeExpClov(PLUS,0,0);
+        clov->makeExpClov(PLUS,1,0);
+
+        invclov->makeExpClov(PLUS,0,0);
+        invclov->makeExpClov(PLUS,1,0);
+
 		void *clover[2];
 		void *cloverInv[2];
 
-		GetMemoryPtrClover(clov->getOffId(),clov->getDiaId(),invclov->getOffId(),invclov->getDiaId());
+		GetMemoryPtrClover(clov->getExpOffId(),clov->getExpDiaId(),invclov->getExpOffId(),invclov->getExpDiaId());
 
 		loadCloverQuda( (void*)(clover), (void *)(cloverInv), &quda_inv_param);
 #endif
@@ -578,9 +522,7 @@ else
 	StopWatch create_swatch;
 	create_swatch.reset(); create_swatch.start();
 	QDPIO::cout << solver_string << "Creating Subspace" << std::endl;
-
 	subspace_pointers = QUDAMGUtils::create_subspace<T>(invParam);
-
 	XMLBufferWriter file_xml;
 	push(file_xml, "FileXML");
 	pop(file_xml);
@@ -591,6 +533,7 @@ else
 	push(record_xml, "RecordXML");
 	write(record_xml, "foo", foo);
 	pop(record_xml);
+
 
 	TheNamedObjMap::Instance().create< QUDAMGUtils::MGSubspacePointers* >(invParam.SaveSubspaceID);
 	TheNamedObjMap::Instance().get(invParam.SaveSubspaceID).setFileXML(file_xml);
@@ -659,9 +602,6 @@ QDPIO::cout << solver_string << " init_time = "
 
 		START_CODE();
 
-        //QDPIO::cout<<"\n\nSecond checks here \n\n"<<std::endl;
-        //QDPIO::cout  << "\n\nrunning AbsTwoStepChronologicalPredictor4D:\n\n " ;
-
 		StopWatch swatch;
 		swatch.start();
 
@@ -711,10 +651,6 @@ QDPIO::cout << solver_string << " init_time = "
 		//        g_5 M g_5 Y = chi
 		//     =>    M Y' = chi'  with chi' = gamma_5*chi
 
-
-        //Double debugdiff = sqrt(norm2(Y_prime));
-        //QDPIO::cout << "Debug Y_prime  = " << debugdiff << "\n\n";
-
 		Y_solve_timer.start();
 
 
@@ -729,7 +665,7 @@ QDPIO::cout << solver_string << " init_time = "
 					*invclov,
 					g5chi,
 					Y_prime);
-		   	Y[rb[1]] = Gamma(Nd*Nd -1)*Y_prime;
+			Y[rb[1]] = Gamma(Nd*Nd -1)*Y_prime;
 		}
 		else {
 			T tmp = zero;
@@ -843,7 +779,6 @@ QDPIO::cout << solver_string << " init_time = "
 			}
 			else {
 				T tmp = zero;
-                QDPIO::cout<< "\n\ninvclov->apply\n\n";
 				invclov->apply(tmp,g5chi,MINUS,1);
 				res_tmp = qudaInvert(*clov,
 							*invclov,
@@ -1157,7 +1092,6 @@ QDPIO::cout << solver_string << " init_time = "
 		}
 		else {
 			T tmp = zero;
-            QDPIO::cout<< "\n\ninvclov->apply\n\n";
 			invclov->apply(tmp,g5chi,MINUS,1);
 
 			res1 = qudaInvert(*clov,
@@ -1274,7 +1208,6 @@ QDPIO::cout << solver_string << " init_time = "
 			}
 			else {
 				T tmp = zero;
-                QDPIO::cout<< "\n\ninvclov->apply\n\n";
 				invclov->apply(tmp,g5chi,MINUS,1);
 
 				res_tmp = qudaInvert(*clov,

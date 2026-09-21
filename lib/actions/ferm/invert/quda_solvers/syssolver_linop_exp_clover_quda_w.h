@@ -524,12 +524,12 @@ namespace Chroma
             ExpCloverTermT<T, U> clov;
             ExpCloverTermT<T, U> invclov;
 
-            QDPIO::cout << "Creating CloverTerm" << std::endl;
+            QDPIO::cout << "Creating ExpCloverTerm" << std::endl;
             clov.create(fstate, invParam_.CloverParams);
             // Don't recompute, just copy
             invclov.createInv(fstate, invParam_.CloverParams,clov);
 
-            //QDPIO::cout << "Inverting CloverTerm" << std::endl;
+            QDPIO::cout << "Inverting ExpCloverTerm" << std::endl;
             //invclov.choles(0);
             //invclov.choles(1);
 

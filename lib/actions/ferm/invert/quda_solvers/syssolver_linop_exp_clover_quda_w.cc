@@ -46,6 +46,8 @@ namespace Chroma
         //! Register all the factories
         bool registerAll() 
         {
+
+            QDPIO::cout << "Registering QUDA_EXP_CLOVER_INVERTER" << std::endl;
             bool success = true; 
             if (! registered)
             {

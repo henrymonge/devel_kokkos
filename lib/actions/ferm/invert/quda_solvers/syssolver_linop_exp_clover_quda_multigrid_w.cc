@@ -1,5 +1,5 @@
 /*! \file
- *  \QUDA MULTIGRID ExpClover solver.
+ *  \QUDA MULTIGRID Clover solver.
  */
 // comment
 #include "actions/ferm/invert/syssolver_linop_factory.h"
@@ -67,7 +67,6 @@ namespace Chroma
 		const auto& sub = A->subset();
     T mod_chi;
 
-
     // Copy source into mod_chi, and zero the off-parity
 		if( is_precond ) {	
     	mod_chi[rb[0]] = zero;
@@ -101,33 +100,6 @@ namespace Chroma
 
 #endif
 
-//Check to compare with Chroma exp-clover op
-#if 0
-    //Check to compare with Chroma exp-clover op
-
-    LatticeFermion src, resc, resc2, diff;
-    gaussian(src);
-    resc = zero;
-    resc2 = zero;
-
-    void* spinorInc =(void *)&(src.elem(sub.start()).elem(0).elem(0).real());
-    void* spinorOutc =(void *)&(resc.elem(sub.start()).elem(0).elem(0).real());
-
-    for (int cb = 0; cb < 2; ++cb)
-    {
-        //eclov.apply(res2, src, PLUS, cb);
-        //eclov.applyExpClov(res, src, PLUS, cb);
-        cloverQuda(spinorOutc, spinorInc, (QudaInvertParam*)&quda_inv_param, (QudaParity) cb, 1);
-        clov->apply(resc2, src, PLUS, 1);
-    }
-
-    diff = resc-resc2;
-    Double normdiff = sqrt(norm2(diff) / norm2(src));
-    QDPIO::cout << "Clover Chroma-QUDA Diff  = " << normdiff << "\n";
-
-#endif
-
-
     // Do the solve here 
     StopWatch swatch1; 
     swatch1.reset();
@@ -143,6 +115,7 @@ namespace Chroma
     ret.n_count =quda_inv_param.iter;
     ret.resid = quda_inv_param.true_res[0];
     return ret;
+
   }
   
 

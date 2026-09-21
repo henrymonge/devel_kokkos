@@ -3316,6 +3316,8 @@ namespace Chroma
     //Pass the new exp clov tri
     //typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
 
+    QDPIO::cout << "\n\n\n\nCalling QDPExpCloverTermT<T, U, N_exp>::packForQUDA\n\n\n\n"
+
     Real mclov= RealT(Nd) + param.Mass - 1.0;
     if(inv==1){
         mclov= 1.0/mclov ;

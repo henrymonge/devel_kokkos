@@ -1963,6 +1963,7 @@ if( Chroma_ENABLE_QUDA )
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_multigrid_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_w.h
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_multigrid_w.h
     actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_multigrid_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.h
@@ -1996,6 +1997,7 @@ target_sources(chromalib PRIVATE
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_multigrid_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_w.cc
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_multigrid_w.cc
     actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_multigrid_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.cc
