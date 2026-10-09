@@ -338,7 +338,8 @@ namespace Chroma
      * \param cb   checkerboard of work (Read)
      */
     void choles(int cb){
-      QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
+        //This is not needed for exp-clover
+        //QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
     };
 
     //! Computes the inverse of the term on cb using Cholesky
@@ -375,6 +376,9 @@ namespace Chroma
 
     // Apply a power of a matrix from A^0 to A^5
     void applyPower(T& chi, const T& psi, enum PlusMinus isign, int cb, int power = 1) const;
+
+    // Apply a power of a matrix from A^0 to A^5 times the scaling factor C
+    void applyScaledPower(T& chi, const T& psi, enum PlusMinus isign, int cb, LatticeREAL C, int power = 1) const;
 
     // Apply exponential operator
     void applyInv(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
@@ -434,8 +438,8 @@ namespace Chroma
     //! PACK UP the Clover term for QUDA library:
     void packForQUDA(multi1d<QUDAPackedClovSite<REALT> >& quda_pack, int cb) const; 
 
-    int getDiaId() const { return tri_dia.getId(); }
-    int getOffId() const { return tri_off.getId(); }
+    //int getDiaId() const { return tri_dia.getId(); }
+    //int getOffId() const { return tri_off.getId(); }
 
     int getExpDiaId() const { return exp_tri_dia.getId(); }
     int getExpOffId() const { return exp_tri_off.getId(); }
@@ -460,9 +464,6 @@ namespace Chroma
     multi1d<U>  u;
     CloverFermActParams          param;
     LatticeREAL                  tr_log_diag_; // Fill this out during create
-    LatticeDouble tr_M; // Fill this out during create
-
-    // but save the global sum until needed.
 
     OLattice<PComp<PTriDia<RScalar <WORD<REALT> > > > >  tri_dia;
     OLattice<PComp<PTriOff<RComplex<WORD<REALT> > > > >  tri_off;    
@@ -471,7 +472,6 @@ namespace Chroma
     OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc;
     OLattice<PComp<Pq<RScalar <WORD<REALT> > > > >  qc_inv; 
     OLattice<PComp<Pq<Pq<RScalar<WORD<REALT>>>> > > C;
-    multi3d<LatticeDouble> C_arr; // Fill this out during create;
     OScalar<  PScalar< PScalar< RScalar< Word< REALT> > > > > diag_mass;
 
   };
@@ -777,8 +777,6 @@ namespace Chroma
         
     tr_log_diag_ = from.tr_log_diag_;
    
-    tr_M = from.tr_M;
-
     tri_dia = from.tri_dia;
     tri_off = from.tri_off;
     C=from.C;
@@ -863,27 +861,7 @@ namespace Chroma
     // Execute the function
     function_tracePowers_exec(function, dummy, tri_dia, tri_off, qc,qc_inv, C);
 
-    C_arr.resize(2,6,6); 
-#  pragma omp parallel for
-    for (int site = 0; site < Layout::sitesOnNode(); ++site)
-    {
-      tr_M.elem(site).elem().elem().elem() = 0;
-
-      for (int block = 0; block < 2; ++block)
-      {
-    for (int d = 0; d < 6; ++d)
-
-    for (int i = 0; i < 6; ++i)
-    {
-        for (int j = 0; j < 6; ++j)
-        {
-            C_arr[block][i][j].elem(site).elem().elem() = C.elem(site).comp[block].q[i].q[j].elem().elem(); 
-        }
-    }
-
-      }
-    }
-
+    tr_log_diag_=0;
 
     END_CODE();
   }
@@ -1202,15 +1180,9 @@ namespace Chroma
   {
     START_CODE();
 
-    LatticeREAL ff=tr_log_diag_;
-
-
     END_CODE();
 
-    // Need to thread generic sums in QDP++?
-    // Need to thread generic norm2() in QDP++?
-    return sum(tr_M, rb[cb]);
-
+    return sum(tr_log_diag_, rb[cb]);
   }
 
   //! TRIACNTR 
@@ -1724,7 +1696,153 @@ namespace Chroma
   }
 
 
+  template<typename RealT,typename T, typename X,typename Y, typename Q>
+  void function_compute_deriv_powers(JitFunction& function,
+                const RealT& diag_mass,
+				T& chi,
+				const T& psi,
+				const X& tri_dia,
+				const Y& tri_off,
+                const Q& qc,
+				const Subset& s)
+  {
+#ifdef QDP_DEEP_LOG
+    function.type_W = typeid(REAL).name();
+    function.set_dest_id( chi.getId() );
+    function.set_is_lat(true);
+#endif
+   
+    AddressLeaf addr_leaf(s);
 
+    forEach(diag_mass, addr_leaf, NullCombine());
+    forEach(chi, addr_leaf, NullCombine());
+    forEach(psi, addr_leaf, NullCombine());
+    forEach(tri_dia, addr_leaf, NullCombine());
+    forEach(tri_off, addr_leaf, NullCombine());
+
+    forEach(qc, addr_leaf, NullCombine());
+
+    int th_count = s.numSiteTable();
+    WorkgroupGuardExec workgroupGuardExec(th_count);
+
+    std::vector<QDPCache::ArgKey> ids;
+    workgroupGuardExec.check(ids);
+    ids.push_back( s.getIdSiteTable() );
+    for(unsigned i=0; i < addr_leaf.ids.size(); ++i) 
+      ids.push_back( addr_leaf.ids[i] );
+    jit_launch(function,th_count,ids);
+
+  }
+
+
+  template<typename RealT,typename T, typename X,typename Y, typename Q>
+  void function_compute_deriv_powers( JitFunction& function,
+                  const RealT& diag_mass,
+				  const T& chi,
+				  const T& psi,
+				  const X& tri_dia,
+				  const Y& tri_off,
+                  const Q& qc,
+				  const Subset& s)
+  {
+    llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
+
+    WorkgroupGuard workgroupGuard;
+    ParamRef p_site_table = llvm_add_param<int*>();
+
+    ParamLeafScalar param_leaf;
+
+    typedef typename WordType<T>::Type_t REALT;
+
+    typedef typename LeafFunctor<RealT, ParamLeafScalar>::Type_t  RealTJIT;
+    RealTJIT diag_mass_jit(forEach(diag_mass, param_leaf, TreeCombine()));
+
+    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
+    TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
+    TJIT psi_jit(forEach(psi, param_leaf, TreeCombine()));
+    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t psi_r;
+    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t chi_r;
+    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t tmp_r;
+    typedef typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t CHI_R;
+
+
+    typedef typename LeafFunctor<X, ParamLeafScalar>::Type_t  XJIT;
+    XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
+    typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_r;
+    typedef typename REGType< typename XJIT::Subtype_t >::Type_t TRIDIA_R;
+
+
+    typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
+    YJIT tri_off_jit(forEach(tri_off, param_leaf, TreeCombine()));
+    typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_r;
+    typedef typename REGType< typename YJIT::Subtype_t >::Type_t TRIOFF_R;
+
+    typedef typename LeafFunctor<Q, ParamLeafScalar>::Type_t  QJIT;
+    QJIT qc_jit(forEach(qc, param_leaf, TreeCombine()));
+    typename REGType< typename QJIT::Subtype_t >::Type_t qc_r;
+
+    llvm::Value* r_idx_thread = llvm_thread_idx();
+
+    workgroupGuard.check(r_idx_thread);
+
+    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
+
+
+    typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
+    diag_mass_reg.setup_value( diag_mass_jit.elem() );
+
+    auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+    psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+    tri_dia_r.setup( tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+    tri_off_r.setup( tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+ 
+    qc_r.setup( qc_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+
+    //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+    int pow_max=5;
+    if (N_exp_default <5)
+       pow_max=N_exp_default;  
+
+    int n = 2*Nc;
+    for(int cspin = 0; cspin < n; ++cspin)
+    {
+        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
+        // cchi[0*n+i] = ppsi[0*n+i];
+        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
+        // cchi[1*n+i] = tri[site].diag[1][i] * ppsi[1*n+i];
+    }
+
+      // Main loop:  chi = psi + q[i]/q[i-1] A chi
+      for (int pow = pow_max; pow > 0; --pow)
+      {
+
+        applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,0>(tmp_r,chi_r,tri_dia_r,tri_off_r);
+        applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,1>(tmp_r,chi_r,tri_dia_r,tri_off_r);
+        for(int cspin = 0; cspin < n; ++cspin)
+        {
+            // Operator
+            //cchi[cspin] = ppsi[cspin] + (tri_in.q[0][pow] / tri_in.q[0][pow - 1]) * tmp[cspin];
+            chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3)
+                    +(qc_r.elem(0).elem(pow) / qc_r.elem(0).elem(pow - 1)) * tmp_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) ;
+            chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3)
+                    +(qc_r.elem(1).elem(pow) / qc_r.elem(1).elem(pow - 1)) * tmp_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) ;
+
+        }
+
+      }
+
+    for(int cspin = 0; cspin < n; ++cspin)
+    {   
+
+        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) *= qc_r.elem(0).elem(0)*diag_mass_reg.elem().elem();
+        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) *= qc_r.elem(1).elem(0)*diag_mass_reg.elem().elem();
+    }
+
+
+    chi_j = chi_r;
+
+    jit_get_function(function);
+  }
 
   template<typename T>
   void function_copy_exec(JitFunction& function,
@@ -1800,7 +1918,6 @@ namespace Chroma
 
     jit_get_function(function);
   }
-
 
   /**
    * Apply a dslash
@@ -1916,14 +2033,9 @@ namespace Chroma
     int th_count = s.numSiteTable();
     WorkgroupGuardExec workgroupGuardExec(th_count);
 
-    JitParam jit_pow_i( QDP_get_global_cache().addJitParamInt( pow_i ) );
-    JitParam jit_pow_j( QDP_get_global_cache().addJitParamInt( pow_j ) );
-
     std::vector<QDPCache::ArgKey> ids;
     workgroupGuardExec.check(ids);
     ids.push_back( s.getIdSiteTable() );
-    ids.push_back(jit_pow_i.get_id());
-    ids.push_back(jit_pow_j.get_id());
 
     for(unsigned i=0; i < addr_leaf.ids.size(); ++i)
       ids.push_back( addr_leaf.ids[i] );
@@ -1941,13 +2053,12 @@ namespace Chroma
                   const W& Cv,
                   const Subset& s)
   {
+
+    //QDPIO::cout << "BUILD apply_coeff  pow_i=" << pow_i << " pow_j=" << pow_j << std::endl;
     llvm_start_new_function("apply_coeff",__PRETTY_FUNCTION__);
 
     WorkgroupGuard workgroupGuard;
     ParamRef p_site_table = llvm_add_param<int*>();
-    ParamRef p_pow_i = llvm_add_param<int>();
-    ParamRef p_pow_j = llvm_add_param<int>();
-
     ParamLeafScalar param_leaf;
 
     typedef typename WordType<T>::Type_t REALT;
@@ -1964,8 +2075,6 @@ namespace Chroma
 
 
     llvm::Value* r_idx_thread = llvm_thread_idx();
-    llvm::Value* v_pow_i = llvm_derefParam(p_pow_i);
-    llvm::Value* v_pow_j = llvm_derefParam(p_pow_j);
 
     workgroupGuard.check(r_idx_thread);
 
@@ -1980,11 +2089,16 @@ namespace Chroma
 
     int n = 2*Nc;
 
+    const int p_i = pow_i;      // host constants, baked into this kernel
+    const int p_j = pow_j;
+
+    auto c0_r = Cv_r.elem(0).elem(p_i).elem(p_j);   // hoisted: independent of cspin
+    auto c1_r = Cv_r.elem(1).elem(p_i).elem(p_j);
+
     for(int cspin = 0; cspin < n; ++cspin)
     {
-       chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = Cv_r.elem(0).elem(pow_i).elem(pow_j)*psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-       chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = Cv_r.elem(1).elem(pow_i).elem(pow_j)*psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
-       // cchi[1*n+i] =  ppsi[1*n+i];
+       chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = c0_r*psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
+       chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = c1_r*psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
     }
 
     chi_j = chi_r;
@@ -1999,19 +2113,18 @@ namespace Chroma
   {
     START_CODE();
 
-    static JitFunction function;
-
+    //static JitFunction function;
+    static std::map<std::pair<int,int>, JitFunction> func_cache;
+    JitFunction& function = func_cache[std::make_pair(pow_i, pow_j)]; //ij
     if (function.empty())
-      function_apply_coeff_build( function, chi, psi,pow_i, pow_j, C, rb[cb]);
+      function_apply_coeff_build( function, chi, psi,pow_i, pow_j, C, rb[cb]); //ij
     
     // Execute the function
-    function_apply_coeff_exec( function, chi, psi, pow_i,pow_j, C, rb[cb]);
-
+    function_apply_coeff_exec( function, chi, psi, pow_i,pow_j, C, rb[cb]);  //ij
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
   }
-
 
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::applyPower(T& chi, const T& psi,
@@ -2054,7 +2167,6 @@ namespace Chroma
 
     END_CODE();
   }
-
 
   template <typename T, typename U,int N_exp>
   //void JITExpCloverTermT<T, U, N_exp>::applyInv(T& chi, const T& psi, enum PlusMinus isign,
@@ -2296,8 +2408,7 @@ namespace Chroma
         cchi_vec[i]= zero;
 
         for(int j=0;j<=5;j++){
-            //(*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            tmp_psi=psi*C_arr[cb][i][j]; //.elem(0).comp[cb].q[i].q[j].elem().elem();
+            (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
             (*this).applyPower(ppsi, tmp_psi,isign, cb, j);
             sum_psi_vec[i]+=ppsi;
         }
@@ -2387,9 +2498,7 @@ namespace Chroma
             cchi_vec[nterm]= zero;
 
             for(int j=0;j<=5;j++){
-                //(*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
-                tmp_psi=psi[k]*C_arr[cb][i][j]; //.elem(0).comp[cb].q[i].q[j].elem().elem();
-
+                (*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
                 (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
                 sum_psi_vec[nterm]+=ppsi;
             }

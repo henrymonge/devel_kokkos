@@ -475,10 +475,7 @@ namespace Chroma
 
             invclov->makeExpClov(PLUS,0,0);
             invclov->makeExpClov(PLUS,1,0);
-
-            QDPIO::cout << solver_string << "\nDebug print: USING QUDA DEVICE IFACE\n"<< std::endl;
-
-			//GetMemoryPtrClover(clov->getOffId(),clov->getDiaId(),invclov->getOffId(),invclov->getDiaId());
+			
             GetMemoryPtrClover(clov->getExpOffId(),clov->getExpDiaId(),invclov->getExpOffId(),invclov->getExpDiaId());
 
 

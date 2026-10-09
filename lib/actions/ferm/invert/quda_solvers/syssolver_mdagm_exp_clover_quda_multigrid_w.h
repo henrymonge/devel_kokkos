@@ -448,10 +448,6 @@ public:
         clov->makeExpClov(PLUS,0,0);
         clov->makeExpClov(PLUS,1,0);
 
-
-        clov->makeExpClov(MINUS,0,0);
-        clov->makeExpClov(MINUS,1,0);
-
         clov->packForQUDA(packed_clov, 0,0);
         clov->packForQUDA(packed_clov, 1,0);
 
@@ -460,11 +456,6 @@ public:
 
         invclov->makeExpClov(PLUS,0,0);
         invclov->makeExpClov(PLUS,1,0);
-
-        invclov->makeExpClov(MINUS,0,0);
-        invclov->makeExpClov(MINUS,1,0);
-
-        QDPIO::cout<<"\n\n\nHere is the call for invclov->packForQUDA\n\n\n";
 
         invclov->packForQUDA(packed_invclov, 0,0);
         invclov->packForQUDA(packed_invclov, 1,0);
@@ -478,8 +469,6 @@ public:
 
 		quda_inv_param.clover_location = QUDA_CUDA_FIELD_LOCATION;
 		quda_inv_param.clover_order = QUDA_QDPJIT_CLOVER_ORDER;
-
-        QDPIO::cout << "Debug: In here for MdagM" << std::endl;
 
         clov->makeExpClov(PLUS,0,0);
         clov->makeExpClov(PLUS,1,0);

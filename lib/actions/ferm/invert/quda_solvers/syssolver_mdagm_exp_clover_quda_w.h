@@ -548,10 +548,6 @@ public:
         invclov->makeExpClov(PLUS,0,0);
         invclov->makeExpClov(PLUS,1,0);
 
-        invclov->makeExpClov(MINUS,0,0);
-        invclov->makeExpClov(MINUS,1,0);
-
-
 		invclov->packForQUDA(packed_invclov, 0,0);
 		invclov->packForQUDA(packed_invclov, 1,0);
 
@@ -559,10 +555,6 @@ public:
 #else
 		void *clover[2];
 		void *cloverInv[2];
-
-
-        QDPIO::cout << "Debug: In here for MdagM" << std::endl;
-
 
         clov->makeExpClov(PLUS,0,0);
         clov->makeExpClov(PLUS,1,0);

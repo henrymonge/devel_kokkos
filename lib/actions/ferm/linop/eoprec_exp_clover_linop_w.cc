@@ -30,25 +30,10 @@ namespace Chroma
 
     clov.makeExpClov(PLUS,0,0);
     clov.makeExpClov(PLUS,1,0);
-      
-    //clov. makeExpClov(PLUS,0);
-    //makeExpClov(PLUS,1);
-
- 
-    invclov.createInv(fs,param,clov);  // make a copy
+       
+    invclov.createInv(fs,param,clov);  // create the inverse from a copy 
     invclov.makeExpClov(PLUS,0,0);  //inv_eclov was created as inverse
     invclov.makeExpClov(PLUS,1,0);
-
-#if 1
-    invclov.choles(0);  // invert the cb=0 part
-#else
-        invclov.makeExpClov(PLUS,0,0);
-        invclov.makeExpClov(PLUS,1,0);
-        
-        invclov.makeExpClov(MINUS,0,1);
-        invclov.makeExpClov(MINUS,1,1);
-#endif
-
 
     D.create(fs, param.anisoParam);
 
