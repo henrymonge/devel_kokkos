@@ -519,7 +519,7 @@ namespace Chroma
   }
 
 
-  template<typename T, typename X,typename Y, typename Q, typename Z, typename W>
+  template<int N_exp, typename T, typename X,typename Y, typename Q, typename Z, typename W>
   void function_tracePowers_build(JitFunction& function,
                   RScalar<T> &dummy,
                   const X& tri_dia,
@@ -568,7 +568,7 @@ namespace Chroma
     auto qc_j = qc_jit.elem(JitDeviceLayout::Coalesced,r_idx);
     auto qc_inv_j = qc_inv_jit.elem(JitDeviceLayout::Coalesced,r_idx);
 
-    int N_exp =17;
+    //int N_exp =17
     // Compute the q-s for the block
     RScalarREG<WordREG<REALT> > tab[2][N_exp + 1][6];
     RScalarREG<WordREG<REALT> > itab[2][N_exp + 1][6];
@@ -855,7 +855,7 @@ namespace Chroma
     static JitFunction function;
     RScalar<T> dummy; 
     if (function.empty()){
-      function_tracePowers_build( function, dummy, tri_dia, tri_off, qc,qc_inv, C);
+      function_tracePowers_build<N_exp>( function, dummy, tri_dia, tri_off, qc,qc_inv, C);
     }
 
     // Execute the function
@@ -2130,9 +2130,9 @@ namespace Chroma
     }
 
 #else
-
-    T tmp;
-    static JitFunction function;   
+  
+    static std::map<int, JitFunction> func_cache;
+    JitFunction& function = func_cache[power];
 
     if (function.empty())
         function_apply_clov_power_build( function, chi, psi, tri_dia, tri_off, power, rb[cb] );
@@ -2363,22 +2363,19 @@ namespace Chroma
     }
 
     ds_u = zero;
-    multi1d<U> ds_u_tmp;
-    ds_u_tmp.resize(Nd);
+    //multi1d<U> ds_u_tmp;
+    //ds_u_tmp.resize(Nd);
 
     // Get the links
     //const multi1d<U>& u = getU();
-    T ppsi= zero;
-    T cchi= zero;
-    T tmp_psi= psi;
-    //T tmp_chi= chi;
-    //T sum_psi= zero;
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
     multi1d<T> psi_pow(6);
     cchi_vec.resize(6);
     sum_psi_vec.resize(6);
+ 
+    T tmp_psi;
 
 #if 0
     //multi1d<T> cchi_vec;
@@ -2420,7 +2417,6 @@ namespace Chroma
         (*this).applyPower(cchi_vec[j],cchi_vec[j-1], isign, cb,1);
     }
 
-
     for(int i=0;i<=5;i++){
         sum_psi_vec[i]= zero;
         for(int j=0;j<=5;j++){
@@ -2429,29 +2425,8 @@ namespace Chroma
         }
     }
 
-
     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
 
-
-/*
-    for(int i=0;i<=5;i++){
-        ppsi = zero;
-
-        for(int j=0;j<=5;j++){
-            (*this).applyCoeff(tmp_psi, sum_psi_vec[j], isign,cb,i,j);
-            ppsi+=tmp_psi;
-        }
-
-        (*this).applyPower(cchi, chi, isign, cb,i);
-
-        ExpCloverTermBase<T,U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
-
-        for(int k=0;k<Nd;k++){
-            ds_u[k]+=ds_u_tmp[k];
-        } 
-
-    }
-*/
 #endif
  
     // Clear out the deriv on any fixed links
