@@ -1696,14 +1696,14 @@ namespace Chroma
   }
 
 
-  template<typename RealT,typename T, typename X,typename Y, typename Q>
-  void function_compute_deriv_powers(JitFunction& function,
-                const RealT& diag_mass,
-				T& chi,
+
+  template<typename T, typename X,typename Y>
+  void function_apply_clov_power_exec(JitFunction& function,
+   	     		T& chi,
 				const T& psi,
 				const X& tri_dia,
 				const Y& tri_off,
-                const Q& qc,
+                const int pow_i,
 				const Subset& s)
   {
 #ifdef QDP_DEEP_LOG
@@ -1714,13 +1714,10 @@ namespace Chroma
    
     AddressLeaf addr_leaf(s);
 
-    forEach(diag_mass, addr_leaf, NullCombine());
     forEach(chi, addr_leaf, NullCombine());
     forEach(psi, addr_leaf, NullCombine());
     forEach(tri_dia, addr_leaf, NullCombine());
     forEach(tri_off, addr_leaf, NullCombine());
-
-    forEach(qc, addr_leaf, NullCombine());
 
     int th_count = s.numSiteTable();
     WorkgroupGuardExec workgroupGuardExec(th_count);
@@ -1735,14 +1732,14 @@ namespace Chroma
   }
 
 
-  template<typename RealT,typename T, typename X,typename Y, typename Q>
-  void function_compute_deriv_powers( JitFunction& function,
-                  const RealT& diag_mass,
+
+  template<typename T, typename X,typename Y>
+  void function_apply_clov_power_build( JitFunction& function,
 				  const T& chi,
 				  const T& psi,
 				  const X& tri_dia,
 				  const Y& tri_off,
-                  const Q& qc,
+                  const int pow_i,
 				  const Subset& s)
   {
     llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
@@ -1751,11 +1748,6 @@ namespace Chroma
     ParamRef p_site_table = llvm_add_param<int*>();
 
     ParamLeafScalar param_leaf;
-
-    typedef typename WordType<T>::Type_t REALT;
-
-    typedef typename LeafFunctor<RealT, ParamLeafScalar>::Type_t  RealTJIT;
-    RealTJIT diag_mass_jit(forEach(diag_mass, param_leaf, TreeCombine()));
 
     typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
     TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
@@ -1777,10 +1769,6 @@ namespace Chroma
     typename REGType< typename YJIT::Subtype_t >::Type_t tri_off_r;
     typedef typename REGType< typename YJIT::Subtype_t >::Type_t TRIOFF_R;
 
-    typedef typename LeafFunctor<Q, ParamLeafScalar>::Type_t  QJIT;
-    QJIT qc_jit(forEach(qc, param_leaf, TreeCombine()));
-    typename REGType< typename QJIT::Subtype_t >::Type_t qc_r;
-
     llvm::Value* r_idx_thread = llvm_thread_idx();
 
     workgroupGuard.check(r_idx_thread);
@@ -1788,20 +1776,12 @@ namespace Chroma
     llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
 
 
-    typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
-    diag_mass_reg.setup_value( diag_mass_jit.elem() );
-
     auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
     psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
     tri_dia_r.setup( tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
     tri_off_r.setup( tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
  
-    qc_r.setup( qc_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
-
-    //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
-    int pow_max=5;
-    if (N_exp_default <5)
-       pow_max=N_exp_default;  
+    const int power = pow_i;
 
     int n = 2*Nc;
     for(int cspin = 0; cspin < n; ++cspin)
@@ -1813,36 +1793,21 @@ namespace Chroma
     }
 
       // Main loop:  chi = psi + q[i]/q[i-1] A chi
-      for (int pow = pow_max; pow > 0; --pow)
+      for (int pow = power; pow > 0; --pow)
       {
 
         applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,0>(tmp_r,chi_r,tri_dia_r,tri_off_r);
         applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,1>(tmp_r,chi_r,tri_dia_r,tri_off_r);
-        for(int cspin = 0; cspin < n; ++cspin)
-        {
-            // Operator
-            //cchi[cspin] = ppsi[cspin] + (tri_in.q[0][pow] / tri_in.q[0][pow - 1]) * tmp[cspin];
-            chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3)
-                    +(qc_r.elem(0).elem(pow) / qc_r.elem(0).elem(pow - 1)) * tmp_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) ;
-            chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3)
-                    +(qc_r.elem(1).elem(pow) / qc_r.elem(1).elem(pow - 1)) * tmp_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) ;
-
-        }
-
+        chi_r=tmp_r;
       }
-
-    for(int cspin = 0; cspin < n; ++cspin)
-    {   
-
-        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) *= qc_r.elem(0).elem(0)*diag_mass_reg.elem().elem();
-        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) *= qc_r.elem(1).elem(0)*diag_mass_reg.elem().elem();
-    }
-
-
     chi_j = chi_r;
 
     jit_get_function(function);
   }
+
+
+
+
 
   template<typename T>
   void function_copy_exec(JitFunction& function,
@@ -2137,7 +2102,7 @@ namespace Chroma
       QDP_abort(1);
     }
 
-
+#if 0 
     T tmp;
     static JitFunction functionCopy;
     static JitFunction function;   
@@ -2163,6 +2128,19 @@ namespace Chroma
             function_copy_exec( functionCopy, tmp, chi, rb[cb]);
         }
     }
+
+#else
+
+    T tmp;
+    static JitFunction function;   
+
+    if (function.empty())
+        function_apply_clov_power_build( function, chi, psi, tri_dia, tri_off, power, rb[cb] );
+
+    // Execute the function
+    function_apply_clov_power_exec(function, chi, psi, tri_dia, tri_off, power, rb[cb] );
+#endif
+
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
@@ -2324,8 +2302,9 @@ namespace Chroma
         function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
     }else{
         RealT inv_diag_mass = diag_mass;
-        //diag_mass=1.0/diag_mass;       
-        function_make_exp_tri_clov_build(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
+        //diag_mass=1.0/diag_mass;   
+        if (function.empty())    
+            function_make_exp_tri_clov_build(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
 
         // Execute the function
         function_make_exp_tri_clov_exec(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
@@ -2392,12 +2371,18 @@ namespace Chroma
     T ppsi= zero;
     T cchi= zero;
     T tmp_psi= psi;
-    T sum_psi= zero;
+    //T tmp_chi= chi;
+    //T sum_psi= zero;
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
+    multi1d<T> psi_pow(6);
     cchi_vec.resize(6);
     sum_psi_vec.resize(6);
+
+#if 0
+    //multi1d<T> cchi_vec;
+    //cchi_vec.resize(6);
 
     // The exp derivative is computed as
     // A'+AA'/2+A'A/2+A'AA/6+AA'A/6+AAA'/6 = Sum A^i A' A^j
@@ -2418,8 +2403,57 @@ namespace Chroma
     }
 
     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
- 
 
+
+#else
+
+    // The exp derivative is computed as
+    // A'+AA'/2+A'A/2+A'AA/6+AA'A/6+AAA'/6 = Sum A^i A' A^j
+    // applyCoeff multiplies the chi by the exponential term factor 
+    // and the factors from using the Caley Hamilton for A^n, for n>5
+    //sum_psi_vec[j] = A^j
+    psi_pow[0]=psi;
+    cchi_vec[0]=chi;
+
+    for(int j=1;j<=5;j++){
+        (*this).applyPower(psi_pow[j],psi_pow[j-1],isign, cb, 1);
+        (*this).applyPower(cchi_vec[j],cchi_vec[j-1], isign, cb,1);
+    }
+
+
+    for(int i=0;i<=5;i++){
+        sum_psi_vec[i]= zero;
+        for(int j=0;j<=5;j++){
+            (*this).applyCoeff(tmp_psi, psi_pow[j], isign,cb,i,j);
+            sum_psi_vec[i]+=tmp_psi;
+        }
+    }
+
+
+    ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
+
+
+/*
+    for(int i=0;i<=5;i++){
+        ppsi = zero;
+
+        for(int j=0;j<=5;j++){
+            (*this).applyCoeff(tmp_psi, sum_psi_vec[j], isign,cb,i,j);
+            ppsi+=tmp_psi;
+        }
+
+        (*this).applyPower(cchi, chi, isign, cb,i);
+
+        ExpCloverTermBase<T,U>::deriv(ds_u_tmp,cchi,ppsi,isign,cb);
+
+        for(int k=0;k<Nd;k++){
+            ds_u[k]+=ds_u_tmp[k];
+        } 
+
+    }
+*/
+#endif
+ 
     // Clear out the deriv on any fixed links
     (*this).getFermBC().zero(ds_u);
     

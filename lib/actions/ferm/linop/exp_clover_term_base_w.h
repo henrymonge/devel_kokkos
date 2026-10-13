@@ -842,6 +842,7 @@ namespace Chroma
     
     ds_u = zero;
 
+    /*
     for(int mu=0; mu < Nd; mu++) {
       for(int nu = mu+1; nu < Nd; nu++) { 
 
@@ -876,7 +877,7 @@ namespace Chroma
 
     } // end of loop over mu
     
-
+   */
     // Not sure this is needed here, but will be sure
     (*this).getFermBC().zero(ds_u);
     
