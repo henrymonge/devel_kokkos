@@ -880,7 +880,7 @@ namespace Chroma
     
    */
     // Not sure this is needed here, but will be sure
-    (*this).getFermBC().zero(ds_u);
+    //(*this).getFermBC().zero(ds_u);
     
     END_CODE();
   }

@@ -681,6 +681,7 @@ namespace Chroma
 	    }
 	  }
 
+#if 0 //Original version
       //HMC: adding the calculation of the C_ij
       for (int i = 0; i < 6; i++)
       {
@@ -717,6 +718,38 @@ namespace Chroma
             }
         }
       }
+#else
+// replaces the "HMC: adding the calculation of the C_ij" block, inside the block loop
+RScalarREG<WordREG<REALT>> Creg[6][6];
+for (int i = 0; i < 6; i++)
+  for (int j = 0; j < 6; j++)
+    Creg[i][j] = tab[block][0][i] * tab[block][0][j];
+
+unsigned long fact_row = 1;
+for (int row = 0; row <= N_exp; ++row)
+{
+  if (row != 0) fact_row *= (unsigned long)row;
+  unsigned long fact = fact_row * (unsigned long)(row + 1);
+  for (int col = 0; col <= N_exp - row; ++col)
+  {
+    if (col != 0) fact *= (unsigned long)(row + col + 1);
+    if (row == 0 && col == 0) continue;
+
+    RScalarREG<WordREG<REALT>> w( 1.0 / (double)fact );   // host constant, no runtime divide
+    for (int j = 0; j < 6; j++)
+    {
+      RScalarREG<WordREG<REALT>> wt = w * tab[block][col][j];
+      for (int i = 0; i < 6; i++)
+        Creg[i][j] += tab[block][row][i] * wt;
+    }
+  }
+}
+for (int i = 0; i < 6; i++)
+  for (int j = 0; j < 6; j++)
+    Cv_j.elem(block).elem(i).elem(j) = Creg[i][j];        // single write
+
+#endif
+
 
 	}//for block ends
 
@@ -780,7 +813,9 @@ namespace Chroma
    
     tri_dia = from.tri_dia;
     tri_off = from.tri_off;
-    C=from.C;
+    if (inv_op == 0)
+        C = from.C;           // only the forward copy may be differentiated;
+                              // the inverse copy (createInv) never uses C
     if(inv_op == 1){
         qc = from.qc_inv;
         qc_inv = from.qc;
@@ -2672,7 +2707,7 @@ namespace Chroma
     
      ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
 #else
-    int tot_terms=36;
+    //int tot_terms=36;
     //cchi_vec[0][rb[cb]] = chi;
     for (int n = 0; n < chi.size(); n++){
         cchi_vec[6*n][rb[cb]] = chi[n];

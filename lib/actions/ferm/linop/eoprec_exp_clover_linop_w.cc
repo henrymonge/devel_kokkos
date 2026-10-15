@@ -254,11 +254,12 @@ namespace Chroma
     //invclov.derivTrLn(ds_u, isign, 0);
     // Testing Odd Odd Term - get nothing from even even term
     clov.derivTrLn(ds_u, isign, 0);
+    /* The above is zero, so no need for rescaling
     for (int mu = 0; mu < Nd; mu++)
     {
       ds_u[mu] *= (Real(Nd) + param.Mass);
     }
-        
+    */  
 
     END_CODE();
   }
