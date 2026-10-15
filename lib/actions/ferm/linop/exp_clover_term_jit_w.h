@@ -487,9 +487,10 @@ namespace Chroma
 #define WORD Word
 #endif
 
-  template<typename T, typename X,typename Y, typename Q, typename Z, typename W>
+  template<typename T, typename RealT, typename X,typename Y, typename Q, typename Z, typename W>
   void function_tracePowers_exec(JitFunction& function,
                 RScalar<T> &dummy,
+                const RealT& diag_mass,
                 const X& tri_dia,
                 const Y& tri_off,
                 Q& qc,
@@ -499,6 +500,7 @@ namespace Chroma
 
     AddressLeaf addr_leaf(all);
 
+    forEach(diag_mass, addr_leaf, NullCombine());
     forEach(tri_dia, addr_leaf, NullCombine());
     forEach(tri_off, addr_leaf, NullCombine());
 
@@ -520,9 +522,10 @@ namespace Chroma
   }
 
 
-  template<int N_exp, typename T, typename X,typename Y, typename Q, typename Z, typename W>
+  template<int N_exp, typename T, typename RealT, typename X,typename Y, typename Q, typename Z, typename W>
   void function_tracePowers_build(JitFunction& function,
                   RScalar<T> &dummy,
+                  const RealT& diag_mass,
                   const X& tri_dia,
                   const Y& tri_off,
                   Q& qc,
@@ -545,6 +548,9 @@ namespace Chroma
     typedef typename LeafFunctor<Z, ParamLeafScalar>::Type_t  ZJIT;
     typedef typename LeafFunctor<W, ParamLeafScalar>::Type_t  WJIT;
 
+    typedef typename LeafFunctor<RealT, ParamLeafScalar>::Type_t  RealTJIT;
+    RealTJIT diag_mass_jit(forEach(diag_mass, param_leaf, TreeCombine()));
+
     XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
     typename REGType< typename XJIT::Subtype_t >::Type_t tri_dia_r;
 
@@ -564,6 +570,12 @@ namespace Chroma
 
     tri_dia_r.setup( tri_dia_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
     tri_off_r.setup( tri_off_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
+
+    typename REGType< typename RealTJIT::Subtype_t >::Type_t diag_mass_reg;
+
+    diag_mass_reg.setup_value( diag_mass_jit.elem() );
+
+    RScalarREG<WordREG<REALT>> diag_mass_factor = diag_mass_reg.elem().elem();
 
     auto Cv_j = Cv_jit.elem(JitDeviceLayout::Coalesced,r_idx);
     auto qc_j = qc_jit.elem(JitDeviceLayout::Coalesced,r_idx);
@@ -746,7 +758,7 @@ for (int row = 0; row <= N_exp; ++row)
 }
 for (int i = 0; i < 6; i++)
   for (int j = 0; j < 6; j++)
-    Cv_j.elem(block).elem(i).elem(j) = Creg[i][j];        // single write
+    Cv_j.elem(block).elem(i).elem(j) = diag_mass_factor*Creg[i][j];        // single write
 
 #endif
 
@@ -891,11 +903,11 @@ for (int i = 0; i < 6; i++)
     static JitFunction function;
     RScalar<T> dummy; 
     if (function.empty()){
-      function_tracePowers_build<N_exp>( function, dummy, tri_dia, tri_off, qc,qc_inv, C);
+      function_tracePowers_build<N_exp>( function, dummy,diag_mass, tri_dia, tri_off, qc,qc_inv, C);
     }
 
     // Execute the function
-    function_tracePowers_exec(function, dummy, tri_dia, tri_off, qc,qc_inv, C);
+    function_tracePowers_exec(function, dummy,diag_mass, tri_dia, tri_off, qc,qc_inv, C);
 
     tr_log_diag_=0;
 

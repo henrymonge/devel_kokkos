@@ -59,11 +59,12 @@ namespace Chroma
 
     A.deriv(ds_u, chi, psi, isign);
 
+    /*
     for (int mu = 0; mu < Nd; mu++)
     {
       ds_u[mu] *= (Real(Nd) + param.Mass);
     }
-
+    */
     multi1d<LatticeColorMatrix> ds_tmp(Nd);
 
     ds_tmp = zero;
