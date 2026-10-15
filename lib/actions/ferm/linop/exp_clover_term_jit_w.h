@@ -2681,7 +2681,7 @@ for (int i = 0; i < 6; i++)
 
     //T ppsi= zero;
     //T cchi= zero;
-    //T tmp_psi= zero; //psi;
+    T tmp_psi= zero; //psi;
     //T sum_psi= zero;
 
 
@@ -2718,6 +2718,31 @@ for (int i = 0; i < 6; i++)
     }
     
      ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
+#endif
+
+#if 1
+    multi1d<T> pow_psi;
+    pow_psi.resize(num_terms);
+    for (int n = 0; n < chi.size(); n++){
+        cchi_vec[6*n][rb[cb]] = chi[n];
+        pow_psi[6*n][rb[cb]] = psi[n];
+    }
+    for (int n = 0; n < chi.size(); n++){
+        for (int i = 1; i <= 5; i++){
+            (*this).applyPower(cchi_vec[6*n+i], cchi_vec[6*n+i-1], isign, cb, 1);
+            (*this).applyPower(pow_psi[6*n+i], pow_psi[6*n+i-1], isign, cb, 1);
+        }
+    }
+    int nterm=0
+    for (int n = 0; n < chi.size(); n++){
+        for (int i = 0; i <= 5; i++){
+            (*this).applyCoeff(tmp_psi, pow_psi[nterm], isign,cb,i,j);
+            sum_psi_vec[nterm]+=tmp_psi;
+            nterm+=1;
+        }
+    }
+    ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
+
 #else
     //int tot_terms=36;
     //cchi_vec[0][rb[cb]] = chi;

@@ -658,7 +658,8 @@ QDPIO::cout << solver_string << " init_time = "
 		}
 		else {
 			T tmp = zero;
-			invclov->apply(tmp,g5chi,MINUS,1);
+			//invclov->apply(tmp,g5chi,MINUS,1);
+            invclov->applyExpClov(tmp,g5chi,MINUS,1);
 
 			res1 = qudaInvert(*clov,
 						*invclov,
@@ -674,7 +675,8 @@ QDPIO::cout << solver_string << " init_time = "
 		        }
 #endif
 			tmp[rb[1]] = Gamma(Nd*Nd-1)*Y_prime;
-			clov->apply(Y,tmp,MINUS,1);
+			//clov->apply(Y,tmp,MINUS,1);
+            clov->applyExpClov(Y,tmp,MINUS,1);
 
 		}
 
@@ -768,7 +770,9 @@ QDPIO::cout << solver_string << " init_time = "
 			}
 			else {
 				T tmp = zero;
-				invclov->apply(tmp,g5chi,MINUS,1);
+				//invclov->apply(tmp,g5chi,MINUS,1);
+                invclov->applyExpClov(tmp,g5chi,MINUS,1);
+
 				res_tmp = qudaInvert(*clov,
 							*invclov,
 							tmp,
@@ -785,7 +789,8 @@ QDPIO::cout << solver_string << " init_time = "
 #endif
 
 				tmp[rb[1]] = Gamma(Nd*Nd-1)*Y_prime;
-				clov->apply(Y,tmp,MINUS,1);
+				//clov->apply(Y,tmp,MINUS,1);
+                clov->applyExpClov(Y,tmp,MINUS,1);
 
 			}
 
@@ -1081,7 +1086,8 @@ QDPIO::cout << solver_string << " init_time = "
 		}
 		else {
 			T tmp = zero;
-			invclov->apply(tmp,g5chi,MINUS,1);
+			//invclov->apply(tmp,g5chi,MINUS,1);
+            invclov->applyExpClov(tmp,g5chi,MINUS,1);
 
 			res1 = qudaInvert(*clov,
 						*invclov,
@@ -1099,7 +1105,8 @@ QDPIO::cout << solver_string << " init_time = "
 #endif
 
 			tmp[rb[1]] = Gamma(Nd*Nd-1)*Y_prime;
-			clov->apply(Y,tmp,MINUS,1);
+			//clov->apply(Y,tmp,MINUS,1);
+            clov->applyExpClov(Y,tmp,MINUS,1);
 
 		}
 
@@ -1197,7 +1204,8 @@ QDPIO::cout << solver_string << " init_time = "
 			}
 			else {
 				T tmp = zero;
-				invclov->apply(tmp,g5chi,MINUS,1);
+				//invclov->apply(tmp,g5chi,MINUS,1);
+                invclov->applyExpClov(tmp,g5chi,MINUS,1);
 
 				res_tmp = qudaInvert(*clov,
 							*invclov,
@@ -1214,7 +1222,8 @@ QDPIO::cout << solver_string << " init_time = "
                        	        }
 #endif
 				tmp[rb[1]] = Gamma(Nd*Nd-1)*Y_prime;
-				clov->apply(Y,tmp,MINUS,1);
+				//clov->apply(Y,tmp,MINUS,1);
+                clov->applyExpClov(Y,tmp,MINUS,1);
 			}
 
 			// Check solution

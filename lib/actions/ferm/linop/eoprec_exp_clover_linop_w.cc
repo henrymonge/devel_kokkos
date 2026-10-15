@@ -235,11 +235,12 @@ namespace Chroma
     swatch.reset(); swatch.start();
     clov.derivMultipole(ds_u, chi, psi, isign, 0);
 
+    /*
     for (int mu = 0; mu < Nd; mu++)
     {
       ds_u[mu] *= (Real(Nd) + param.Mass);
     }
-
+    */
     swatch.stop();
     clov_deriv_time  += swatch.getTimeInSeconds();
 
@@ -330,11 +331,12 @@ namespace Chroma
     
     swatch.reset(); swatch.start();
     clov.derivMultipole(ds_u, chi, psi, isign, 1);
+    /*
     for (int mu = 0; mu < Nd; mu++)
     {
      ds_u[mu] *= (Real(Nd) + param.Mass);
     }
-
+    */
     swatch.stop();
     clov_deriv_time  += swatch.getTimeInSeconds();
 
