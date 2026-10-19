@@ -6,6 +6,7 @@
 #include "actions/ferm/fermacts/fermacts_aggregate_w.h"
 
 #include "actions/ferm/fermacts/unprec_clover_fermact_w.h"
+#include "actions/ferm/fermacts/unprec_exp_clover_fermact_w.h"
 #include "actions/ferm/fermacts/unprec_wilson_fermact_w.h"
 #include "actions/ferm/fermacts/unprec_parwilson_fermact_w.h"
 #include "actions/ferm/fermacts/unprec_graphene_fermact_w.h"
@@ -14,6 +15,7 @@
 #include "actions/ferm/fermacts/unprec_w12_fermact_w.h"
 
 #include "actions/ferm/fermacts/eoprec_clover_fermact_w.h"
+#include "actions/ferm/fermacts/eoprec_exp_clover_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_clover_extfield_fermact_w.h"
 #include "actions/ferm/fermacts/eoprec_wilson_fermact_w.h"
@@ -102,6 +104,16 @@ namespace Chroma
 	success &= EvenOddPrecCloverFermActEnv::registerAll();
 	success &= SymEvenOddPrecCloverFermActEnv::registerAll();
 	success &= UnprecCloverFermActEnv::registerAll();
+
+#if ! defined(BUILD_JIT_CLOVER_TERM)
+    //success &= EvenOddPrecExpCloverFermActEnv::registerAll();
+    //success &= UnprecExpCloverFermActEnv::registerAll();
+
+#endif
+    success &= EvenOddPrecExpCloverFermActEnv::registerAll();
+    success &= UnprecExpCloverFermActEnv::registerAll();
+
+
 	success &= EvenOddPrecCloverOrbifoldFermActEnv::registerAll();
 	success &= EvenOddPrecSLICFermActEnv::registerAll();
 	success &= EvenOddPrecSLRCFermActEnv::registerAll();

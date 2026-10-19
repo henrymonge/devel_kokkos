@@ -550,9 +550,11 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/fermacts/fermact_factory_w.h
 	actions/ferm/fermacts/clover_fermact_params_w.h
 	actions/ferm/fermacts/eoprec_clover_fermact_w.h
+    actions/ferm/fermacts/eoprec_exp_clover_fermact_w.h
 	actions/ferm/fermacts/seoprec_clover_fermact_w.h
 	actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.h
 	actions/ferm/fermacts/unprec_clover_fermact_w.h
+    actions/ferm/fermacts/unprec_exp_clover_fermact_w.h
 	actions/ferm/fermacts/nef_fermact_params_w.h
 	actions/ferm/fermacts/eoprec_slic_fermact_w.h
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.h
@@ -654,14 +656,20 @@ list(APPEND ChromaLIB_HEADERS
 	actions/ferm/linop/lwldslash_base_3d_w.h
 	actions/ferm/linop/lwldslash_3d_qdp_w.h
 	actions/ferm/linop/clover_term_w.h
+    actions/ferm/linop/clov_triang_qdp_w.h
 	actions/ferm/linop/clover_term_base_w.h
+	actions/ferm/linop/exp_clover_term_base_w.h
 	actions/ferm/linop/clover_term_qdp_w.h
+    actions/ferm/linop/exp_clover_term_w.h
+	actions/ferm/linop/exp_clover_term_qdp_w.h
 	actions/ferm/linop/eoprec_clover_linop_w.h
+    actions/ferm/linop/eoprec_exp_clover_linop_w.h
 	actions/ferm/linop/seoprec_clover_linop_w.h
 	actions/ferm/linop/shifted_linop_w.h
 	actions/ferm/linop/eoprec_clover_dumb_linop_w.h
 	actions/ferm/linop/eoprec_clover_orbifold_linop_w.h
 	actions/ferm/linop/unprec_clover_linop_w.h
+    actions/ferm/linop/unprec_exp_clover_linop_w.h
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.h
 	actions/ferm/linop/eoprec_dwflike_linop_base_array_w.h
 	actions/ferm/linop/eoprec_dwf_linop_array_w.h
@@ -1468,9 +1476,11 @@ target_sources(chromalib PRIVATE
 	actions/ferm/fermacts/eoprec_ovext_fermact_array_w.cc 
 	actions/ferm/fermacts/clover_fermact_params_w.cc 
 	actions/ferm/fermacts/eoprec_clover_fermact_w.cc 
+    actions/ferm/fermacts/eoprec_exp_clover_fermact_w.cc
 	actions/ferm/fermacts/seoprec_clover_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.cc 
 	actions/ferm/fermacts/unprec_clover_fermact_w.cc 
+    actions/ferm/fermacts/unprec_exp_clover_fermact_w.cc
 	actions/ferm/fermacts/nef_fermact_params_w.cc 
 	actions/ferm/fermacts/eoprec_slic_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.cc 
@@ -1563,11 +1573,13 @@ target_sources(chromalib PRIVATE
 	actions/ferm/linop/unprec_wilson_linop_w.cc 
 	actions/ferm/linop/clover_term_base_w.cc 
 	actions/ferm/linop/clover_term_qdp_w.cc 
-	actions/ferm/linop/eoprec_clover_linop_w.cc 
+	actions/ferm/linop/eoprec_clover_linop_w.cc
+    actions/ferm/linop/eoprec_exp_clover_linop_w.cc  
 	actions/ferm/linop/seoprec_clover_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_dumb_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_orbifold_linop_w.cc 
 	actions/ferm/linop/unprec_clover_linop_w.cc 
+    actions/ferm/linop/unprec_exp_clover_linop_w.cc
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.cc 
 	actions/ferm/linop/eoprec_slic_linop_w.cc 
 	actions/ferm/linop/eoprec_slrc_linop_w.cc 
@@ -1928,6 +1940,7 @@ endif()
 #######################################################
 if( Chroma_ENABLE_JIT_CLOVER )
   list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit_w.h)
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/exp_clover_term_jit_w.h)
   list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit2_w.h)
   target_sources(chromalib PRIVATE util/gauge/stout_utils_jit.cc)
   target_sources(chromalib PRIVATE util/gauge/stout_utils_jit2.cc)
@@ -1946,12 +1959,16 @@ if( Chroma_ENABLE_QUDA )
 	actions/ferm/invert/quda_solvers/syssolver_quda_nef_params.h
 	actions/ferm/invert/quda_solvers/multi_syssolver_quda_clover_params.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_clover_quda_w.h
+    actions/ferm/invert/quda_solvers/syssolver_linop_exp_clover_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_clover_quda_multigrid_w.h
+    actions/ferm/invert/quda_solvers/syssolver_linop_exp_clover_quda_multigrid_w.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_nef_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_multigrid_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_w.h
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_multigrid_w.h
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_multigrid_w.h
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.h
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_clover_quda_w.h
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_wilson_quda_w.h
@@ -1978,12 +1995,16 @@ target_sources(chromalib PRIVATE
 	actions/ferm/invert/quda_solvers/syssolver_quda_wilson_params.cc
 	actions/ferm/invert/quda_solvers/syssolver_quda_multigrid_wilson_params.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_clover_quda_w.cc
+    actions/ferm/invert/quda_solvers/syssolver_linop_exp_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_clover_quda_multigrid_w.cc
+    actions/ferm/invert/quda_solvers/syssolver_linop_exp_clover_quda_multigrid_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_nef_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_linop_wilson_quda_multigrid_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_w.cc
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_clover_quda_multigrid_w.cc
+    actions/ferm/invert/quda_solvers/syssolver_mdagm_exp_clover_quda_multigrid_w.cc
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_wilson_quda_w.cc

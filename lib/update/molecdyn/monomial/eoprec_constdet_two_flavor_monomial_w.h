@@ -76,6 +76,7 @@ namespace Chroma
 
       // No predictor used here.
       QDPIO::cout << "TwoFlavWilson4DMonomial: resetting Predictor before energy calc solve" << std::endl;
+
       (getMDSolutionPredictor()).reset();
 
       SystemSolverResults_t res = (*invMdagM)(X, getPhi());
