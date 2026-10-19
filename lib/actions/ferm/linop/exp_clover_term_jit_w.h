@@ -375,6 +375,10 @@ namespace Chroma
     // chi = sum_j C[i][j] A^j psi  (Horner, one launch)
     void applyCoeffSum(T& chi, const T& psi, enum PlusMinus isign, int cb, int pow_i) const;
 
+    // chi = sum_j C[i][j] * pp[j]   (pp[j] = A^j psi, precomputed; one launch per row i)
+    void applyCoeffCombine(T& chi, const multi1d<T>& pp, int offset,
+                           enum PlusMinus isign, int cb, int pow_i) const;
+
     // Apply a power of a matrix from A^0 to A^5
     void applyPower(T& chi, const T& psi, enum PlusMinus isign, int cb, int power = 1) const;
 
@@ -1549,8 +1553,10 @@ for (int i = 0; i < 6; i++)
             } 
 
           }
-          multiply<REALT,TRIDIA_R,TRIOFF_R,0>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
-          multiply<REALT,TRIDIA_R,TRIOFF_R,1>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
+          if(pow < pow_max){
+              multiply<REALT,TRIDIA_R,TRIOFF_R,0>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
+              multiply<REALT,TRIDIA_R,TRIOFF_R,1>(tmp_tri_dia_r,tmp_tri_off_r, curr_tri_dia_r, curr_tri_off_r, tri_dia_r, tri_off_r);
+          }
       }
 
     exp_tri_dia_j= exp_tri_dia_r;
@@ -2098,6 +2104,8 @@ for (int i = 0; i < 6; i++)
     Cv_r.setup( Cv_j );
 
     auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
+
+    chi_r.setup( chi_j ); 
     psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
 
     int n = 2*Nc;
@@ -2110,8 +2118,8 @@ for (int i = 0; i < 6; i++)
 
     for(int cspin = 0; cspin < n; ++cspin)
     {
-       chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = c0_r*psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-       chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = c1_r*psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
+       chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) += c0_r*psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
+       chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) += c1_r*psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
     }
 
     chi_j = chi_r;
@@ -2311,6 +2319,125 @@ for (int i = 0; i < 6; i++)
 
     jit_get_function(function);
   }
+
+
+  template<typename T, typename W>
+  void function_coeff_combine_exec(JitFunction& function,
+                                   T& chi,
+                                   const multi1d<T>& pp, int offset,
+                                   const W& Cv,
+                                   const Subset& s)
+  {
+#ifdef QDP_DEEP_LOG
+    function.type_W = typeid(REAL).name();
+    function.set_dest_id( chi.getId() );
+    function.set_is_lat(true);
+#endif
+
+    AddressLeaf addr_leaf(s);
+
+    // Order must match the build: chi, pp[offset+0..5], Cv
+    forEach(chi, addr_leaf, NullCombine());
+    for (int j = 0; j < 6; ++j)
+      forEach(pp[offset+j], addr_leaf, NullCombine());
+    forEach(Cv, addr_leaf, NullCombine());
+
+    int th_count = s.numSiteTable();
+    WorkgroupGuardExec workgroupGuardExec(th_count);
+
+    std::vector<QDPCache::ArgKey> ids;
+    workgroupGuardExec.check(ids);
+    ids.push_back( s.getIdSiteTable() );
+    for (unsigned i = 0; i < addr_leaf.ids.size(); ++i)
+      ids.push_back( addr_leaf.ids[i] );
+    jit_launch(function, th_count, ids);
+  }
+
+
+  template<typename T, typename W>
+  void function_coeff_combine_build(JitFunction& function,
+                                    const T& chi,
+                                    const multi1d<T>& pp, int offset,
+                                    const W& Cv,
+                                    const int pow_i,              // baked into the kernel
+                                    const Subset& s)
+  {
+    llvm_start_new_function("coeff_combine", __PRETTY_FUNCTION__);
+
+    WorkgroupGuard workgroupGuard;
+    ParamRef p_site_table = llvm_add_param<int*>();
+    ParamLeafScalar param_leaf;
+
+    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
+    typedef typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t CHI_R;
+
+    // Parameter leaves, same order as exec
+    TJIT chi_jit(forEach(chi,          param_leaf, TreeCombine()));
+    TJIT p0     (forEach(pp[offset+0], param_leaf, TreeCombine()));
+    TJIT p1     (forEach(pp[offset+1], param_leaf, TreeCombine()));
+    TJIT p2     (forEach(pp[offset+2], param_leaf, TreeCombine()));
+    TJIT p3     (forEach(pp[offset+3], param_leaf, TreeCombine()));
+    TJIT p4     (forEach(pp[offset+4], param_leaf, TreeCombine()));
+    TJIT p5     (forEach(pp[offset+5], param_leaf, TreeCombine()));
+    TJIT* pj[6] = { &p0, &p1, &p2, &p3, &p4, &p5 };
+
+    typedef typename LeafFunctor<W, ParamLeafScalar>::Type_t  WJIT;
+    WJIT Cv_jit(forEach(Cv, param_leaf, TreeCombine()));
+    typename REGType< typename WJIT::Subtype_t >::Type_t Cv_r;
+
+    llvm::Value* r_idx_thread = llvm_thread_idx();
+    workgroupGuard.check(r_idx_thread);
+    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table, r_idx_thread );
+
+    Cv_r.setup( Cv_jit.elem(JitDeviceLayout::Coalesced, r_idx) );   // same as apply_coeff
+    auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced, r_idx);
+
+    const int n = 2*Nc;
+    const int i = pow_i;
+
+    CHI_R acc;
+    for (int j = 0; j <= 5; ++j)
+    {
+      CHI_R v;
+      v.setup( pj[j]->elem(JitDeviceLayout::Coalesced, r_idx) );   // one input live at a time
+
+      auto c0 = Cv_r.elem(0).elem(i).elem(j);
+      auto c1 = Cv_r.elem(1).elem(i).elem(j);
+
+      for (int k = 0; k < n; ++k)
+      {
+        if (j == 0) {                                               // first term initializes: no zeroing needed
+          acc.elem((0*n+k)/3).elem((0*n+k)%3)  = c0 * v.elem((0*n+k)/3).elem((0*n+k)%3);
+          acc.elem((1*n+k)/3).elem((1*n+k)%3)  = c1 * v.elem((1*n+k)/3).elem((1*n+k)%3);
+        } else {
+          acc.elem((0*n+k)/3).elem((0*n+k)%3) += c0 * v.elem((0*n+k)/3).elem((0*n+k)%3);
+          acc.elem((1*n+k)/3).elem((1*n+k)%3) += c1 * v.elem((1*n+k)/3).elem((1*n+k)%3);
+        }
+      }
+    }
+
+    chi_j = acc;                                                    // single write
+
+    jit_get_function(function);
+  }
+
+  template<typename T, typename U, int N_exp>
+  void JITExpCloverTermT<T,U,N_exp>::applyCoeffCombine(T& chi, const multi1d<T>& pp, int offset,
+                                                       enum PlusMinus isign, int cb, int pow_i) const
+  {
+    START_CODE();
+
+    static std::map<int, JitFunction> func_cache;     // one kernel per row i
+    JitFunction& function = func_cache[pow_i];
+
+    if (function.empty())
+      function_coeff_combine_build(function, chi, pp, offset, C, pow_i, rb[cb]);
+
+    function_coeff_combine_exec(function, chi, pp, offset, C, rb[cb]);
+
+    END_CODE();
+  }
+
 
   template<typename T, typename U, int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::applyCoeffSum(T& chi, const T& psi,
@@ -2589,7 +2716,7 @@ for (int i = 0; i < 6; i++)
     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
 #endif
 
-#if 1
+#if 0
 
     cchi_vec[0][rb[cb]] = chi;
     for (int i = 1; i <= 5; i++)
@@ -2607,6 +2734,8 @@ for (int i = 0; i < 6; i++)
     // applyCoeff multiplies the chi by the exponential term factor 
     // and the factors from using the Caley Hamilton for A^n, for n>5
     //sum_psi_vec[j] = A^j
+
+#if 0
     psi_pow[0]=psi;
     cchi_vec[0]=chi;
 
@@ -2618,12 +2747,28 @@ for (int i = 0; i < 6; i++)
     for(int i=0;i<=5;i++){
         sum_psi_vec[i]= zero;
         for(int j=0;j<=5;j++){
-            (*this).applyCoeff(tmp_psi, psi_pow[j], isign,cb,i,j);
-            sum_psi_vec[i]+=tmp_psi;
+            //(*this).applyCoeff(tmp_psi, psi_pow[j], isign,cb,i,j);
+            //sum_psi_vec[i]+=tmp_psi;
+            (*this).applyCoeff(sum_psi_vec[i], psi_pow[j], isign,cb,i,j);
+            //sum_psi_vec[i]+=tmp_psi;
         }
     }
 
     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
+#endif
+
+    psi_pow[0][rb[cb]]  = psi;
+    cchi_vec[0][rb[cb]] = chi;
+    for (int j = 1; j <= 5; j++) {
+        (*this).applyPower(psi_pow[j],  psi_pow[j-1],  isign, cb, 1);
+        (*this).applyPower(cchi_vec[j], cchi_vec[j-1], isign, cb, 1);
+    }
+
+    for (int i = 0; i <= 5; i++)
+        (*this).applyCoeffCombine(sum_psi_vec[i], psi_pow, 0, isign, cb, i);
+
+    ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
+
 
 #endif
  
@@ -2733,13 +2878,20 @@ for (int i = 0; i < 6; i++)
             (*this).applyPower(pow_psi[6*n+i], pow_psi[6*n+i-1], isign, cb, 1);
         }
     }
-    int nterm=0
+
     for (int n = 0; n < chi.size(); n++){
+        for (int i = 0; i <= 5; i++)
+            (*this).applyCoeffCombine(sum_psi_vec[6*n+i], pow_psi, 6*n, isign, cb, i);
+        /*
         for (int i = 0; i <= 5; i++){
-            (*this).applyCoeff(tmp_psi, pow_psi[nterm], isign,cb,i,j);
-            sum_psi_vec[nterm]+=tmp_psi;
+            sum_psi_vec[6*n+i]=zero;
+            for(int j=0;j<=5;j++){
+                //(*this).applyCoeff(tmp_psi, pow_psi[nterm], isign,cb,n,i);
+                //sum_psi_vec[nterm]+=tmp_psi;
+                (*this).applyCoeff(sum_psi_vec[6*n+i], pow_psi[6*n+j], isign,cb,i,j);
+            }
             nterm+=1;
-        }
+        }*/
     }
     ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
 
