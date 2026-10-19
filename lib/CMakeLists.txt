@@ -1076,6 +1076,7 @@ list(APPEND ChromaLIB_HEADERS
 	meas/inline/io/inline_read_map_obj_disk.h
 	meas/inline/io/inline_copy_map_obj.h
 	meas/inline/io/inline_write_timeslice_map_obj_disk.h
+	meas/inline/io/inline_cmd.h
 )
 
 
@@ -1852,6 +1853,7 @@ target_sources(chromalib PRIVATE
 	meas/inline/schrfun/inline_sfpcac_w.cc 
 	meas/inline/smear/inline_smear_aggregate.cc 
 	meas/inline/smear/inline_link_smear.cc
+	meas/inline/io/inline_cmd.cc 
 )
 
 # Taken Out of original build Makefile.am
@@ -1974,6 +1976,8 @@ if( Chroma_ENABLE_QUDA )
 	actions/ferm/invert/quda_solvers/quda_gcr_params.h
 	actions/ferm/invert/quda_solvers/quda_multigrid_params.h
 	actions/ferm/invert/quda_solvers/qdpjit_memory_wrapper.h
+	actions/ferm/invert/quda_solvers/quda_eig_params.h
+	actions/ferm/invert/quda_solvers/xml_array_utils.h
 	meas/inline/io/inline_erase_quda_multigrid_space.h
 	update/molecdyn/predictor/quda_predictor.h
 )
@@ -2003,6 +2007,7 @@ target_sources(chromalib PRIVATE
 	actions/ferm/invert/quda_solvers/syssolver_mdagm_wilson_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_clover_quda_w.cc
 	actions/ferm/invert/quda_solvers/multi_syssolver_mdagm_cg_wilson_quda_w.cc
+	actions/ferm/invert/quda_solvers/quda_eig_params.cc
 	meas/inline/io/inline_erase_quda_multigrid_space.cc
 	update/molecdyn/predictor/quda_predictor.cc
 )
@@ -2025,6 +2030,7 @@ endif()
 if( Chroma_ENABLE_SUPERBBLAS )
   list(APPEND ChromaLIB_HEADERS 
      meas/inline/hadron/inline_disco_prob_defl_superb_w.h
+     meas/inline/hadron/inline_disco_prob_3d_defl_superb_w.h
      meas/inline/hadron/inline_prop_and_matelem_distillation_superb_w.h
      meas/inline/hadron/inline_unsmeared_hadron_node_distillation_superb_w.h
      meas/inline/hadron/inline_baryon_matelem_colorvec_superb_w.h
@@ -2032,9 +2038,11 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_create_colorvecs_superb.h
      meas/inline/hadron/inline_eigenvalues_superb_w.h
      meas/inline/hadron/inline_inverter_test_superb_w.h
+     meas/inline/hadron/inline_corr_superb_w.h
   )
   target_sources(chromalib PRIVATE 
      meas/inline/hadron/inline_disco_prob_defl_superb_w.cc
+     meas/inline/hadron/inline_disco_prob_3d_defl_superb_w.cc
      meas/inline/hadron/inline_prop_and_matelem_distillation_superb_w.cc
      meas/inline/hadron/inline_unsmeared_hadron_node_distillation_superb_w.cc
      meas/inline/hadron/inline_baryon_matelem_colorvec_superb_w.cc 
@@ -2042,6 +2050,7 @@ if( Chroma_ENABLE_SUPERBBLAS )
      meas/inline/hadron/inline_create_colorvecs_superb.cc
      meas/inline/hadron/inline_eigenvalues_superb_w.cc
      meas/inline/hadron/inline_inverter_test_superb_w.cc
+     meas/inline/hadron/inline_corr_superb_w.cc
   )
   target_include_directories(chromalib PUBLIC ${SUPERBBLAS_DIR}/include)
   add_library(superbblas STATIC IMPORTED )
@@ -2073,6 +2082,14 @@ if( Chroma_ENABLE_SUPERBBLAS )
      endif()
   endif()
 
+  if( Chroma_ENABLE_REDSTAR_DATALIB )
+     target_include_directories(chromalib PUBLIC ${REDSTAR_DATALIB_DIR}/include)
+     add_library(redstar-datalib STATIC IMPORTED )
+     set_target_properties( redstar-datalib PROPERTIES IMPORTED_LOCATION ${REDSTAR_DATALIB_DIR}/lib/libadat.a )
+     target_link_libraries(redstar-datalib INTERFACE QDPXX::qdp)
+     target_link_libraries(chromalib PUBLIC redstar-datalib )
+  endif()
+
   if( QDP_BACKEND_ROCM OR Chroma_ENABLE_ROCM)
      target_compile_options(chromalib PUBLIC ${HIP_CPP_CONFIG})
      target_link_libraries(superbblas INTERFACE roc::hipblas roc::hipsparse roc::hipsolver roc::rocblas roc::rocsolver)
@@ -2101,10 +2118,7 @@ foreach( file ${ChromaLIB_HEADERS})
   install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/${file} DESTINATION include/${basedir} )
 endforeach()
 
-set(Chroma_CXX_STANDARD "17")
-if (QDP_IS_QDPJIT)
-  set(Chroma_CXX_STANDARD "20")
-endif()
+set(Chroma_CXX_STANDARD "20")
 
 set_target_properties( chromalib PROPERTIES CXX_STANDARD ${Chroma_CXX_STANDARD} )
 set_target_properties( chromalib PROPERTIES CXX_EXTENSIONS OFF )
