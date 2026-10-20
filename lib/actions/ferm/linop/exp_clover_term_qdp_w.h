@@ -237,22 +237,17 @@ namespace Chroma
 
 
     template < typename REALT, int block = 0>
-    inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,int inv, double mclov)
+    inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,double mclov)
     {
 
       //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
  
       RScalar<REALT> qi[6];
       // Row 0
-      if(inv==0){
-          for (int i = 0; i < 6; i++)
-            qi[i] = ((RScalar<REALT>) mclov)*tri_in.q[block][i];
-      }else{
-          for (int i = 0; i < 6; i++){
-            qi[i] = ((RScalar<REALT>) mclov)*tri_in.qinv[block][i];//to check
-            //qi[i] = tri_in.qinv[block][i]/(((RScalar<REALT>) mclov ) * ((RScalar<REALT>) mclov ));
-          }          
-      }
+
+      for (int i = 0; i < 6; i++)
+          qi[i] = ((RScalar<REALT>) mclov)*tri_in.q[block][i];
+
  
       int pow_max=5;
       if (N_exp_default <5)
@@ -803,7 +798,7 @@ namespace Chroma
 
     void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
 
-    void makeExpClov(enum PlusMinus isign, int cb, int inverse);
+    void makeExpClov(enum PlusMinus isign, int cb);
 
     // Apply exponential operator
     void applyInv(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
@@ -1961,6 +1956,7 @@ namespace Chroma
 
       ExpClovTriang<REALT>* tri;
       int cb;
+      REALT diag_mass; 
     };
 
     template <typename U, int N_exp>
@@ -2114,6 +2110,11 @@ namespace Chroma
         }
       }
 
+      const RScalar<REALT> dm(a->diag_mass);
+      for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
+          tri[site].C[block][i][j] *= dm;
+
 	}//for block ends
 
 	// Assemble te exponential from the q-s and powers of A.
@@ -2194,10 +2195,11 @@ namespace Chroma
       QDP_abort(1);
     }
 
+    const REALT dm = diag_mass.elem().elem().elem().elem();
     for (int cb = 0; cb < 2; ++cb)
     {
       const int num_sites = rb[cb].siteTable().size();
-      QDPExpCloverEnv::TracePowersArgs<U> arg = {tri, cb};
+      QDPExpCloverEnv::TracePowersArgs<U> arg = {tri, cb,dm};
       dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::TracePowerSiteLoop<U, N_exp>);
     }
     END_CODE();
@@ -2504,7 +2506,7 @@ namespace Chroma
     };
 
 
-    template <typename T, int inv = 0>
+    template <typename T>
     void makeExpClovSiteLoop(int lo, int hi, int MyId, makeExpClovArgs<T>* arg)
     {
 #ifndef QDP_IS_QDPJIT
@@ -2528,8 +2530,8 @@ namespace Chroma
          int site = rb[cb].siteTable()[ssite];
 
         //need to pass the reference to tr_Minv
-         siteApplicationExpPack<REALT,0>(tri_out[site],tri[site],inv, mclov);
-         siteApplicationExpPack<REALT,1>(tri_out[site],tri[site],inv, mclov);
+         siteApplicationExpPack<REALT,0>(tri_out[site],tri[site], mclov);
+         siteApplicationExpPack<REALT,1>(tri_out[site],tri[site], mclov);
 
       }
       END_CODE();
@@ -2751,7 +2753,7 @@ namespace Chroma
 
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::makeExpClov(enum PlusMinus isign,
-					     int cb, int inverse)
+					     int cb)
   {
 #ifndef QDP_IS_QDPJIT
     START_CODE();
@@ -2774,11 +2776,8 @@ namespace Chroma
 
     // The dispatch function is at the end of the file
     // ought to work for non-threaded targets too...
-    if (inverse==1){
-        dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T, 1>);
-    }else{
-        dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T, 0>);
-    }
+    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T>);
+    
     //(*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
@@ -3315,8 +3314,6 @@ namespace Chroma
     //QDPExpCloverEnv::QUDAPackArgs<REALT> args = {cb, quda_array, tri};
     //Pass the new exp clov tri
     //typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
-
-    QDPIO::cout << "\n\n\n\nCalling QDPExpCloverTermT<T, U, N_exp>::packForQUDA\n\n\n\n"
 
     Real mclov= RealT(Nd) + param.Mass - 1.0;
     if(inv==1){
