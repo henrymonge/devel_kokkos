@@ -1554,16 +1554,11 @@ namespace Chroma
     }
 
     ds_u = zero;
-    multi1d<U> ds_u_tmp;
-    ds_u_tmp.resize(Nd);
-
     // Get the links
     //const multi1d<U>& u = getU();
 
-    T ppsi= zero;
-    T cchi= zero;
     T tmp_psi= psi;
-    T sum_psi= zero;
+    T ppsi;
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
@@ -1635,16 +1630,11 @@ namespace Chroma
     }
 
     ds_u = zero;
-    multi1d<U> ds_u_tmp;
-    ds_u_tmp.resize(Nd);
-
     // Get the links
     //const multi1d<U>& u = getU();
 
-    T ppsi= zero;
-    T cchi= zero;
     T tmp_psi= zero; //psi;
-    T sum_psi= zero;
+    T ppsi;
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;

@@ -588,7 +588,6 @@ namespace Chroma
     //int N_exp =17
     // Compute the q-s for the block
     RScalarREG<WordREG<REALT> > tab[2][N_exp + 1][6];
-    RScalarREG<WordREG<REALT> > itab[2][N_exp + 1][6];
  
     for (int a = 0; a < 2; ++a)
       for (int i = 0; i < N_exp + 1; ++i)
@@ -2580,8 +2579,6 @@ namespace Chroma
     cchi_vec.resize(6);
     sum_psi_vec.resize(6);
  
-    T tmp_psi;
-
     psi_pow[0][rb[cb]]  = psi;
     cchi_vec[0][rb[cb]] = chi;
     for (int j = 1; j <= 5; j++) {
@@ -2637,12 +2634,9 @@ namespace Chroma
 
     ds_u = zero;
     multi1d<U> ds_u_tmp;
-    ds_u_tmp.resize(Nd);
 
     // Get the links
     //const multi1d<U>& u = getU();
-
-    T tmp_psi= zero; 
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
