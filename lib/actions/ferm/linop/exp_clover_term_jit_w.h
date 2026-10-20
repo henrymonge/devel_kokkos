@@ -2488,8 +2488,6 @@ namespace Chroma
       StopWatch watch;
       watch.start();
 
-      QDPIO::cout << "Calling packForQUDA \n";
-
       QDPCloverEnv::QUDAPackArgs<REALT,TD,TO> args = { cb, quda_array , exp_tri_dia , exp_tri_off };
       dispatch_to_threads(num_sites, args, QDPCloverEnv::qudaPackSiteLoop<REALT,TD,TO>);
 

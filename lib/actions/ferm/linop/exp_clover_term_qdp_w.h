@@ -2768,8 +2768,6 @@ namespace Chroma
     //if(inverse==1)
     //    mclov= 1.0/mclov ; 
 
-
-    QDPIO::cout << "Mclov " << mclov.elem().elem().elem().elem()<< "\n";
     QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,mclov};
     int num_sites = rb[cb].siteTable().size();
 

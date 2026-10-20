@@ -165,9 +165,6 @@ namespace Chroma
   {
     START_CODE();
 
-
-    QDPIO::cout << "I am running derivMultiple now debug" << std::endl;
-
     // base deriv resizes.
     // Even even checkerboard
     derivMultipole(ds_u, chi, psi, isign,0);
