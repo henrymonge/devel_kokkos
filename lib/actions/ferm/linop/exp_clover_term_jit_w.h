@@ -397,7 +397,7 @@ namespace Chroma
 
     void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
 
-    void makeExpClov(enum PlusMinus isign, int cb, int inverse);
+    void makeExpClov(enum PlusMinus isign, int cb);
  
     void deriv(multi1d<U>& ds_u,
            const T& chi, const T& psi,
@@ -697,74 +697,35 @@ namespace Chroma
 	    }
 	  }
 
-#if 0 //Original version
-      //HMC: adding the calculation of the C_ij
-      for (int i = 0; i < 6; i++)
+    // replaces the "HMC: adding the calculation of the C_ij" block, inside the block loop
+    RScalarREG<WordREG<REALT>> Creg[6][6];
+    for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+        Creg[i][j] = tab[block][0][i] * tab[block][0][j];
+
+    unsigned long fact_row = 1;
+    for (int row = 0; row <= N_exp; ++row)
+    {
+      if (row != 0) fact_row *= (unsigned long)row;
+      unsigned long fact = fact_row * (unsigned long)(row + 1);
+      for (int col = 0; col <= N_exp - row; ++col)
       {
+        if (col != 0) fact *= (unsigned long)(row + col + 1);
+        if (row == 0 && col == 0) continue;
+
+        RScalarREG<WordREG<REALT>> w( 1.0 / (double)fact );   // host constant, no runtime divide
         for (int j = 0; j < 6; j++)
         {
-            Cv_j.elem(block).elem(i).elem(j) = tab[block][0][i]*tab[block][0][j];
+          RScalarREG<WordREG<REALT>> wt = w * tab[block][col][j];
+          for (int i = 0; i < 6; i++)
+            Creg[i][j] += tab[block][row][i] * wt;
         }
       }
-
-      fact = 1;
-      unsigned long fact_row = 1;
-
-      for (unsigned int row = 0; row <= N_exp; ++row)
-      { 
-        if (row!=0)
-           fact_row *= (unsigned long)(row);
-        fact=fact_row*(unsigned long)(row+1);
-        for(unsigned int col = 0; col <= N_exp-row; ++col)
-        {
-            if(row!=0 || col!=0) //row=0, col=0 computed above
-            {
-                
-                //This is the factor on the exp = c_n x^n, for the derivative of the n-term x^row x'x^col 
-                //the factor is row+col+1,where row+col=n-1 
-                if( col !=0)
-                    fact *= (unsigned long)(row+col+1);  
-                for (int i = 0; i < 6; i++)
-                {
-                  for (int j = 0; j < 6; j++)
-                  {            
-                      Cv_j.elem(block).elem(i).elem(j) += tab[block][col][j]*tab[block][row][i] / (RScalarREG<WordREG<REALT> >)(fact);    
-                  }
-                }
-            }
-        }
-      }
-#else
-// replaces the "HMC: adding the calculation of the C_ij" block, inside the block loop
-RScalarREG<WordREG<REALT>> Creg[6][6];
-for (int i = 0; i < 6; i++)
-  for (int j = 0; j < 6; j++)
-    Creg[i][j] = tab[block][0][i] * tab[block][0][j];
-
-unsigned long fact_row = 1;
-for (int row = 0; row <= N_exp; ++row)
-{
-  if (row != 0) fact_row *= (unsigned long)row;
-  unsigned long fact = fact_row * (unsigned long)(row + 1);
-  for (int col = 0; col <= N_exp - row; ++col)
-  {
-    if (col != 0) fact *= (unsigned long)(row + col + 1);
-    if (row == 0 && col == 0) continue;
-
-    RScalarREG<WordREG<REALT>> w( 1.0 / (double)fact );   // host constant, no runtime divide
-    for (int j = 0; j < 6; j++)
-    {
-      RScalarREG<WordREG<REALT>> wt = w * tab[block][col][j];
-      for (int i = 0; i < 6; i++)
-        Creg[i][j] += tab[block][row][i] * wt;
     }
-  }
-}
-for (int i = 0; i < 6; i++)
-  for (int j = 0; j < 6; j++)
-    Cv_j.elem(block).elem(i).elem(j) = diag_mass_factor*Creg[i][j];        // single write
+    for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+        Cv_j.elem(block).elem(i).elem(j) = diag_mass_factor*Creg[i][j];        // single write
 
-#endif
 
 
 	}//for block ends
@@ -2000,25 +1961,12 @@ for (int i = 0; i < 6; i++)
       QDP_abort(1); 
     }      
     static JitFunction function;
-#if 0
+   
     if (function.empty())
-      function_apply_exp_clov_build( function, diag_mass,  chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
-    // Execute the function
-    function_apply_exp_clov_exec(function, diag_mass, chi, psi, exp_tri_dia, exp_tri_off,qc, rb[cb] );
-
-#else
-    
-    if (function.empty()){
-      //function_apply_exp_clov_build( function, diag_mass,  chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
       function_apply_clov_build( function, chi, psi, exp_tri_dia, exp_tri_off, rb[cb] );
-    }
 
     // Execute the function
     function_apply_clov_exec( function, chi, psi, exp_tri_dia, exp_tri_off, rb[cb] );
-    //function_apply_exp_clov_exec( function, diag_mass, chi, psi, exp_tri_dia, exp_tri_off, qc, rb[cb]);
-
-#endif
-
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
@@ -2157,36 +2105,7 @@ for (int i = 0; i < 6; i++)
       QDPIO::cerr << __func__ << ": ExpCloverTerm::apply requires Ns==4" << std::endl;
       QDP_abort(1);
     }
-
-#if 0 
-    T tmp;
-    static JitFunction functionCopy;
-    static JitFunction function;   
-
-    if(power==0){
-        if (functionCopy.empty())
-          function_copy_build( functionCopy, chi, psi, rb[cb]);
-
-        // Execute the function
-        function_copy_exec( functionCopy, chi, psi, rb[cb]);
-    }else{
-        if (functionCopy.empty())
-          function_copy_build( functionCopy, tmp, psi, rb[cb]);
-        // Execute the function
-        function_copy_exec( functionCopy, tmp, psi, rb[cb]);
-
-        for(int p=power; p > 0; --p){
-            if (function.empty())
-              function_apply_clov_build( function, chi, tmp, tri_dia, tri_off, rb[cb] );
-
-            // Execute the function
-            function_apply_clov_exec(function, chi, tmp, tri_dia, tri_off, rb[cb] );
-            function_copy_exec( functionCopy, tmp, chi, rb[cb]);
-        }
-    }
-
-#else
-  
+ 
     static std::map<int, JitFunction> func_cache;
     JitFunction& function = func_cache[power];
 
@@ -2195,8 +2114,6 @@ for (int i = 0; i < 6; i++)
 
     // Execute the function
     function_apply_clov_power_exec(function, chi, psi, tri_dia, tri_off, power, rb[cb] );
-#endif
-
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
@@ -2591,7 +2508,7 @@ for (int i = 0; i < 6; i++)
 
   template <typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::makeExpClov(enum PlusMinus isign,
-                         int cb, int inverse)
+                         int cb)
   {
     START_CODE();
 
@@ -2601,30 +2518,14 @@ for (int i = 0; i < 6; i++)
       QDP_abort(1);
     }
 
-    Real mclov;
-
-
     static JitFunction function;
-    T dummy;
 
+    
+    if (function.empty())
+       function_make_exp_tri_clov_build(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
 
-    if (inverse==0){
-        if (function.empty())
-          function_make_exp_tri_clov_build(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
-
-        // Execute the function
-        function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
-    }else{
-        RealT inv_diag_mass = diag_mass;
-        //diag_mass=1.0/diag_mass;   
-        if (function.empty())    
-            function_make_exp_tri_clov_build(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
-
-        // Execute the function
-        function_make_exp_tri_clov_exec(function, inv_diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc_inv, rb[cb]);
-    }
-
-
+    // Execute the function
+    function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
 
     END_CODE();
 
@@ -2659,8 +2560,6 @@ for (int i = 0; i < 6; i++)
     END_CODE();
   }
 
-
-//Improved derivative
   template <typename T, typename U, int N_exp>
   void JITExpCloverTermT<T, U, N_exp>::deriv(multi1d<U>& ds_u,
                  const T& chi, const T& psi,
@@ -2668,18 +2567,12 @@ for (int i = 0; i < 6; i++)
   {
     START_CODE();
 
-
-    //StopWatch swatch;
-    //swatch.reset(); swatch.start();
     // Do I still need to do this?
     if( ds_u.size() != Nd ) {
       ds_u.resize(Nd);
     }
 
     ds_u = zero;
-    //multi1d<U> ds_u_tmp;
-    //ds_u_tmp.resize(Nd);
-
     // Get the links
     //const multi1d<U>& u = getU();
 
@@ -2690,72 +2583,6 @@ for (int i = 0; i < 6; i++)
     sum_psi_vec.resize(6);
  
     T tmp_psi;
-
-#if 0
-    //multi1d<T> cchi_vec;
-    //cchi_vec.resize(6);
-
-    // The exp derivative is computed as
-    // A'+AA'/2+A'A/2+A'AA/6+AA'A/6+AAA'/6 = Sum A^i A' A^j
-    // applyCoeff multiplies the chi by the exponential term factor 
-    // and the factors from using the Caley Hamilton for A^n, for n>5
-    for(int i=0;i<=5;i++){
-        sum_psi_vec[i]= zero;
-        cchi_vec[i]= zero;
-
-        for(int j=0;j<=5;j++){
-            (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
-            (*this).applyPower(ppsi, tmp_psi,isign, cb, j);
-            sum_psi_vec[i]+=ppsi;
-        }
-
-        (*this).applyPower(cchi_vec[i], chi, isign, cb,i);
-
-    }
-
-    ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
-#endif
-
-#if 0
-
-    cchi_vec[0][rb[cb]] = chi;
-    for (int i = 1; i <= 5; i++)
-        (*this).applyPower(cchi_vec[i], cchi_vec[i-1], isign, cb, 1);
-
-    for (int i = 0; i <= 5; i++)
-        (*this).applyCoeffSum(sum_psi_vec[i], psi, isign, cb, i);
-
-    ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
-
-#else
-
-    // The exp derivative is computed as
-    // A'+AA'/2+A'A/2+A'AA/6+AA'A/6+AAA'/6 = Sum A^i A' A^j
-    // applyCoeff multiplies the chi by the exponential term factor 
-    // and the factors from using the Caley Hamilton for A^n, for n>5
-    //sum_psi_vec[j] = A^j
-
-#if 0
-    psi_pow[0]=psi;
-    cchi_vec[0]=chi;
-
-    for(int j=1;j<=5;j++){
-        (*this).applyPower(psi_pow[j],psi_pow[j-1],isign, cb, 1);
-        (*this).applyPower(cchi_vec[j],cchi_vec[j-1], isign, cb,1);
-    }
-
-    for(int i=0;i<=5;i++){
-        sum_psi_vec[i]= zero;
-        for(int j=0;j<=5;j++){
-            //(*this).applyCoeff(tmp_psi, psi_pow[j], isign,cb,i,j);
-            //sum_psi_vec[i]+=tmp_psi;
-            (*this).applyCoeff(sum_psi_vec[i], psi_pow[j], isign,cb,i,j);
-            //sum_psi_vec[i]+=tmp_psi;
-        }
-    }
-
-    ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
-#endif
 
     psi_pow[0][rb[cb]]  = psi;
     cchi_vec[0][rb[cb]] = chi;
@@ -2769,9 +2596,6 @@ for (int i = 0; i < 6; i++)
 
     ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
 
-
-#endif
- 
     // Clear out the deriv on any fixed links
     (*this).getFermBC().zero(ds_u);
     
@@ -2779,7 +2603,7 @@ for (int i = 0; i < 6; i++)
     END_CODE();
   }
 
-#if 1
+
   template <typename T, typename U, int N_exp>
   void JITExpCloverTermT<T, U, N_exp>::derivMultipole(multi1d<U>& ds_u,
                  const multi1d<T>& chi, const multi1d<T>& psi,
@@ -2808,10 +2632,6 @@ for (int i = 0; i < 6; i++)
   {
     START_CODE();
 
-    //StopWatch swatch;
-    //swatch.reset(); swatch.start();
-
-
     // Do I still need to do this?
     if( ds_u.size() != Nd ) {
       ds_u.resize(Nd);
@@ -2824,11 +2644,7 @@ for (int i = 0; i < 6; i++)
     // Get the links
     //const multi1d<U>& u = getU();
 
-    //T ppsi= zero;
-    //T cchi= zero;
-    T tmp_psi= zero; //psi;
-    //T sum_psi= zero;
-
+    T tmp_psi= zero; 
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
@@ -2843,29 +2659,6 @@ for (int i = 0; i < 6; i++)
     // applyCoeff multiplies the chi by the exponential term factor 
     // and the factors from using the Caley Hamilton for A^n, for n>5
 
-#if 0
-    int nterm=0;
-    for(int k=0;k<chi.size();k++){
-        tmp_psi= psi[k];
-        for(int i=0;i<=5;i++){
-            sum_psi_vec[nterm]= zero;
-            cchi_vec[nterm]= zero;
-
-            for(int j=0;j<=5;j++){
-                (*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
-                (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
-                sum_psi_vec[nterm]+=ppsi;
-            }
-
-            (*this).applyPower(cchi_vec[nterm], chi[k], isign, cb,i);
-            nterm+=1;
-        }
-    }
-    
-     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
-#endif
-
-#if 1
     multi1d<T> pow_psi;
     pow_psi.resize(num_terms);
     for (int n = 0; n < chi.size(); n++){
@@ -2882,44 +2675,14 @@ for (int i = 0; i < 6; i++)
     for (int n = 0; n < chi.size(); n++){
         for (int i = 0; i <= 5; i++)
             (*this).applyCoeffCombine(sum_psi_vec[6*n+i], pow_psi, 6*n, isign, cb, i);
-        /*
-        for (int i = 0; i <= 5; i++){
-            sum_psi_vec[6*n+i]=zero;
-            for(int j=0;j<=5;j++){
-                //(*this).applyCoeff(tmp_psi, pow_psi[nterm], isign,cb,n,i);
-                //sum_psi_vec[nterm]+=tmp_psi;
-                (*this).applyCoeff(sum_psi_vec[6*n+i], pow_psi[6*n+j], isign,cb,i,j);
-            }
-            nterm+=1;
-        }*/
     }
     ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
-
-#else
-    //int tot_terms=36;
-    //cchi_vec[0][rb[cb]] = chi;
-    for (int n = 0; n < chi.size(); n++){
-        cchi_vec[6*n][rb[cb]] = chi[n];
-    }
-    for (int n = 0; n < chi.size(); n++){
-        for (int i = 1; i <= 5; i++)
-            (*this).applyPower(cchi_vec[6*n+i], cchi_vec[6*n+i-1], isign, cb, 1);
-    }
-    for (int n = 0; n < chi.size(); n++){
-        for (int i = 0; i <= 5; i++)
-            (*this).applyCoeffSum(sum_psi_vec[6*n+i], psi[n], isign, cb, i);
-    }
-    ExpCloverTermBase<T,U>::derivMultipole(ds_u, cchi_vec, sum_psi_vec, isign, cb);
-
-#endif
-
-
 
     // Clear out the deriv on any fixed links
     (*this).getFermBC().zero(ds_u);
     END_CODE();
   }
-#endif
+
 
   typedef JITExpCloverTermT<LatticeFermion, LatticeColorMatrix, N_exp_default> JITExpCloverTerm; 
   typedef JITExpCloverTermT<LatticeFermionF, LatticeColorMatrixF, N_exp_default> JITExpCloverTermF;

@@ -436,8 +436,8 @@ namespace Chroma
 			
 			packed_clov.resize(all.siteTable().size());
 
-            clov->makeExpClov(PLUS,0,0);
-            clov->makeExpClov(PLUS,1,0);
+            clov->makeExpClov(PLUS,0);
+            clov->makeExpClov(PLUS,1);
 
 			clov->packForQUDA(packed_clov, 0,0);
 			clov->packForQUDA(packed_clov, 1,0);
@@ -445,15 +445,15 @@ namespace Chroma
 			// Always need inverse
 			multi1d<QUDAPackedClovSite<REALT> > packed_invclov(all.siteTable().size());
 
-            invclov->makeExpClov(PLUS,0,0);
-            invclov->makeExpClov(PLUS,1,0);
+            invclov->makeExpClov(PLUS,0);
+            invclov->makeExpClov(PLUS,1);
 
             QDPIO::cout << solver_string << "\nDebug print: NOT USING QUDA DEVICE IFACE\n"<< std::endl;
 
 
 
-            invclov->makeExpClov(MINUS,0,0);
-            invclov->makeExpClov(MINUS,1,0);
+            invclov->makeExpClov(MINUS,0);
+            invclov->makeExpClov(MINUS,1);
 
 			invclov->packForQUDA(packed_invclov, 0,0);
 			invclov->packForQUDA(packed_invclov, 1,0);
@@ -470,11 +470,11 @@ namespace Chroma
 			void *clover[2];
 			void *cloverInv[2];
 
-            clov->makeExpClov(PLUS,0,0);
-            clov->makeExpClov(PLUS,1,0);
+            clov->makeExpClov(PLUS,0);
+            clov->makeExpClov(PLUS,1);
 
-            invclov->makeExpClov(PLUS,0,0);
-            invclov->makeExpClov(PLUS,1,0);
+            invclov->makeExpClov(PLUS,0);
+            invclov->makeExpClov(PLUS,1);
 			
             GetMemoryPtrClover(clov->getExpOffId(),clov->getExpDiaId(),invclov->getExpOffId(),invclov->getExpDiaId());
 

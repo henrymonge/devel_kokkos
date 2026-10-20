@@ -28,12 +28,11 @@ namespace Chroma
 
     clov.create(fs, param);
 
-    clov.makeExpClov(PLUS,0,0);
-    clov.makeExpClov(PLUS,1,0);
+    clov.makeExpClov(PLUS,0);
+    clov.makeExpClov(PLUS,1);
        
     invclov.createInv(fs,param,clov);  // create the inverse from a copy 
-    invclov.makeExpClov(PLUS,0,0);  //inv_eclov was created as inverse
-    //invclov.makeExpClov(PLUS,1,0);
+    invclov.makeExpClov(PLUS,0);  //inv_eclov was created as inverse
 
     D.create(fs, param.anisoParam);
 

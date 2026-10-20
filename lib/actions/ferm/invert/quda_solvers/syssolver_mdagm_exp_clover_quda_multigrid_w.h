@@ -445,8 +445,8 @@ public:
 
 		packed_clov.resize(all.siteTable().size());
 
-        clov->makeExpClov(PLUS,0,0);
-        clov->makeExpClov(PLUS,1,0);
+        clov->makeExpClov(PLUS,0);
+        clov->makeExpClov(PLUS,1);
 
         clov->packForQUDA(packed_clov, 0,0);
         clov->packForQUDA(packed_clov, 1,0);
@@ -454,8 +454,8 @@ public:
 		// Always need inverse
 		multi1d<QUDAPackedClovSite<REALT> > packed_invclov(all.siteTable().size());
 
-        invclov->makeExpClov(PLUS,0,0);
-        invclov->makeExpClov(PLUS,1,0);
+        invclov->makeExpClov(PLUS,0);
+        invclov->makeExpClov(PLUS,1);
 
         invclov->packForQUDA(packed_invclov, 0,0);
         invclov->packForQUDA(packed_invclov, 1,0);
@@ -470,11 +470,11 @@ public:
 		quda_inv_param.clover_location = QUDA_CUDA_FIELD_LOCATION;
 		quda_inv_param.clover_order = QUDA_QDPJIT_CLOVER_ORDER;
 
-        clov->makeExpClov(PLUS,0,0);
-        clov->makeExpClov(PLUS,1,0);
+        clov->makeExpClov(PLUS,0);
+        clov->makeExpClov(PLUS,1);
 
-        invclov->makeExpClov(PLUS,0,0);
-        invclov->makeExpClov(PLUS,1,0);
+        invclov->makeExpClov(PLUS,0);
+        invclov->makeExpClov(PLUS,1);
 
 		void *clover[2];
 		void *cloverInv[2];
