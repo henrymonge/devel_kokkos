@@ -500,104 +500,6 @@ namespace Chroma
 
 #endif
 
-    template <typename REALT, int i = 0>
-    inline void siteApplicationExpClov(RComplex<REALT>* __restrict__ cchi,
-				   const ExpClovTriang<REALT>& tri_in,
-				   const RComplex<REALT>* const __restrict__ ppsi)
-    {
-      //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
-      int pow_max=5;
-      if (N_exp_default <pow_max)
-         pow_max=N_exp_default;
-
-      // Accumulate exponential from only A
-      RComplex<REALT> tmp[12];
-      // Top block
-      // chi = psi
-      for (int cspin = 0; cspin < 6; ++cspin)
-      {
-	cchi[cspin] = ppsi[cspin];
-      }
-
-      // Main loop:  chi = psi + q[i]/q[i-1] A chi
-      for (int pow = pow_max; pow > 0; --pow)
-      {
-	siteApplicationBlock<REALT, 0>(tmp, tri_in.A, cchi);
-	for (int cspin = 0; cspin < 6; cspin++)
-	{
-
-	  if constexpr (i == 0)
-	  {
-	    // Operator
-	    cchi[cspin] = ppsi[cspin] + (tri_in.q[0][pow] / tri_in.q[0][pow - 1]) * tmp[cspin];
-	  }
-	  else
-	  {
-	    // Inverse
-	    cchi[cspin] =
-	      ppsi[cspin] + (tri_in.qinv[0][pow] / tri_in.qinv[0][pow - 1]) * tmp[cspin];
-	  }
-	}
-      }
-
-      for (int cspin = 0; cspin < 6; ++cspin)
-      {
-	if constexpr (i == 0)
-	{
-	  // Operator
-	  cchi[cspin] *= tri_in.q[0][0];
-	}
-	else
-	{
-	  // inverse
-	  cchi[cspin] *= tri_in.qinv[0][0];
-	}
-      }
-
-      // Second Block
-      // chi = psi
-      for (int cspin = 6; cspin < 12; ++cspin)
-      {
-	cchi[cspin] = ppsi[cspin];
-      }
-
-      // Main loop:  chi = psi + q[i]/q[i-1] A chi
-      for (int pow = pow_max; pow > 0; --pow)
-      {
-	siteApplicationBlock<REALT, 1>(tmp, tri_in.A, cchi);
-
-	for (int cspin = 6; cspin < 12; cspin++)
-	{
-	  if constexpr (i == 0)
-	  {
-	    // Operator
-	    cchi[cspin] = ppsi[cspin] + (tri_in.q[1][pow] / tri_in.q[1][pow - 1]) * tmp[cspin];
-	  }
-	  else
-	  {
-	    // Inverse
-	    cchi[cspin] =
-	      ppsi[cspin] + (tri_in.qinv[1][pow] / tri_in.qinv[1][pow - 1]) * tmp[cspin];
-	  }
-	}
-      }
-
-      for (int cspin = 6; cspin < 12; ++cspin)
-      {
-
-	if constexpr (i == 0)
-	{
-	  // Operator
-	  cchi[cspin] *= tri_in.q[1][0];
-	}
-	else
-	{
-	  // Inverse
-	  cchi[cspin] *= tri_in.qinv[1][0];
-	}
-      }
-    }
-
 
    //Apply coefficient to site
     template <typename REALT>
@@ -798,7 +700,7 @@ namespace Chroma
 
     void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
 
-    void makeExpClov(enum PlusMinus isign, int cb);
+    void makeExpClov(int cb);
 
     // Apply exponential operator
     void applyInv(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
@@ -1556,9 +1458,8 @@ namespace Chroma
     ds_u = zero;
     // Get the links
     //const multi1d<U>& u = getU();
-
-    T tmp_psi= psi;
     T ppsi;
+    T tmp_psi;
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;
@@ -1633,7 +1534,7 @@ namespace Chroma
     // Get the links
     //const multi1d<U>& u = getU();
 
-    T tmp_psi= zero; //psi;
+    T tmp_psi; //psi;
     T ppsi;
 
     multi1d<T> cchi_vec;
@@ -2742,8 +2643,7 @@ namespace Chroma
   }
 
   template <typename T, typename U, int N_exp>
-  void QDPExpCloverTermT<T, U, N_exp>::makeExpClov(enum PlusMinus isign,
-					     int cb)
+  void QDPExpCloverTermT<T, U, N_exp>::makeExpClov(int cb)
   {
 #ifndef QDP_IS_QDPJIT
     START_CODE();

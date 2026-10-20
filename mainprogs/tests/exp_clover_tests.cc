@@ -422,8 +422,8 @@ TEST_F(ExpClovFixture, CheckApplyExpClov)
   //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
   //
   //  First test: (diag mass)[ 1 + E ] = regular clover term.
-  eclov.makeExpClov(PLUS,0);
-  eclov.makeExpClov(PLUS,1);
+  eclov.makeExpClov(0);
+  eclov.makeExpClov(1);
 
   for (int cb = 0; cb < 2; ++cb)
   {
@@ -455,8 +455,8 @@ TEST_F(ExpClovFixture, CheckOpExpClov)
   //
   //  First test: (diag mass)[ 1 + E ] = regular clover term.
 
-  eclov.makeExpClov(PLUS,0,0);
-  eclov.makeExpClov(PLUS,1,0);
+  eclov.makeExpClov(0,0);
+  eclov.makeExpClov(1,0);
 
   eclov.makeExpClov(MINUS,0,0);
   eclov.makeExpClov(MINUS,1,0);
@@ -497,11 +497,11 @@ TEST_F(ExpClovFixture, CheckApplyInvExpClov)
   //  exp(x) = (diag mass)[ 1 + E + 1/2 E^2 + .... ]
   //
   //  First test: (diag mass)[ 1 + E ] = regular clover term.
-  eclov.makeExpClov(PLUS,0);
-  eclov.makeExpClov(PLUS,1);
+  eclov.makeExpClov(0);
+  eclov.makeExpClov(1);
 
-  inv_eclov.makeExpClov(PLUS,0);  //inv_eclov was created as inverse
-  inv_eclov.makeExpClov(PLUS,1);
+  inv_eclov.makeExpClov(0);  //inv_eclov was created as inverse
+  inv_eclov.makeExpClov(1);
 
   for (int cb = 0; cb < 2; ++cb)
   {

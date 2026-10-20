@@ -397,7 +397,7 @@ namespace Chroma
 
     void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
 
-    void makeExpClov(enum PlusMinus isign, int cb);
+    void makeExpClov(int cb);
  
     void deriv(multi1d<U>& ds_u,
            const T& chi, const T& psi,
@@ -593,7 +593,6 @@ namespace Chroma
       for (int i = 0; i < N_exp + 1; ++i)
         for (int j = 0; j < 6; ++j){
           tab[a][i][j] = (RScalarREG<WordREG<REALT> >)(0);
-          itab[a][i][j] = (RScalarREG<WordREG<REALT> >)(0);
         }
 
 
@@ -605,7 +604,6 @@ namespace Chroma
       for (int i = 0; i < upper; ++i)
       {
         tab[block][i][i] = (RScalarREG<WordREG<REALT> >)1;
-        itab[block][i][i] = ifact;
         ifact = -ifact;
       }
     }
@@ -1407,7 +1405,7 @@ namespace Chroma
                   const Q& qc,
 				  const Subset& s)
   {
-    llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
+    llvm_start_new_function("amake_exp_tri_clov_build",__PRETTY_FUNCTION__);
 
     WorkgroupGuard workgroupGuard;
     ParamRef p_site_table = llvm_add_param<int*>();
@@ -1610,7 +1608,7 @@ namespace Chroma
                   const Q& qc,
 				  const Subset& s)
   {
-    llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
+    llvm_start_new_function("apply_exp_clov_build",__PRETTY_FUNCTION__);
 
     WorkgroupGuard workgroupGuard;
     ParamRef p_site_table = llvm_add_param<int*>();
@@ -1756,7 +1754,7 @@ namespace Chroma
                   const int pow_i,
 				  const Subset& s)
   {
-    llvm_start_new_function("apply_exp_clov",__PRETTY_FUNCTION__);
+    llvm_start_new_function("apply_clov_power_build",__PRETTY_FUNCTION__);
 
     WorkgroupGuard workgroupGuard;
     ParamRef p_site_table = llvm_add_param<int*>();
@@ -2504,8 +2502,7 @@ namespace Chroma
 
 
   template <typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::makeExpClov(enum PlusMinus isign,
-                         int cb)
+  void JITExpCloverTermT<T,U,N_exp>::makeExpClov(int cb)
   {
     START_CODE();
 
@@ -2633,8 +2630,6 @@ namespace Chroma
     }
 
     ds_u = zero;
-    multi1d<U> ds_u_tmp;
-
     // Get the links
     //const multi1d<U>& u = getU();
 
