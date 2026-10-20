@@ -600,11 +600,10 @@ namespace Chroma
     {
       int upper = N_exp + 1 < 6 ? N_exp + 1 : 6;
       //enum { upper = (N_exp + 1 < 6 ? N_exp + 1 : 6) };
-      RScalarREG<WordREG<REALT> > ifact(1);
+      
       for (int i = 0; i < upper; ++i)
       {
         tab[block][i][i] = (RScalarREG<WordREG<REALT> >)1;
-        ifact = -ifact;
       }
     }
 
@@ -1405,7 +1404,7 @@ namespace Chroma
                   const Q& qc,
 				  const Subset& s)
   {
-    llvm_start_new_function("amake_exp_tri_clov_build",__PRETTY_FUNCTION__);
+    llvm_start_new_function("make_exp_tri_clov_build",__PRETTY_FUNCTION__);
 
     WorkgroupGuard workgroupGuard;
     ParamRef p_site_table = llvm_add_param<int*>();

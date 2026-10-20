@@ -1550,8 +1550,7 @@ namespace Chroma
     // applyCoeff multiplies the chi by the exponential term factor 
     // and the factors from using the Caley Hamilton for A^n, for n>5
     int nterm=0;
-    for(int k=0;k<chi.size();k++){
-        tmp_psi= psi[k];
+    for(int k=0;k<chi.size();k++){       
         for(int i=0;i<=5;i++){
             sum_psi_vec[nterm]= zero;
             cchi_vec[nterm]= zero;
