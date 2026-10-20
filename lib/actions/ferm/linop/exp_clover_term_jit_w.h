@@ -323,15 +323,15 @@ namespace Chroma
 
     virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
             const CloverFermActParams& param_,
-            const JITExpCloverTermT<T,U>& from_, int inv_op);
+            const JITExpCloverTermT<T,U,N_exp>& from_, int inv_op);
 
     virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
 			const CloverFermActParams& param_,
-			const JITExpCloverTermT<T,U>& from_);
+			const JITExpCloverTermT<T,U,N_exp>& from_);
 
     virtual void createInv(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
             const CloverFermActParams& param_,
-            const JITExpCloverTermT<T,U>& from_);
+            const JITExpCloverTermT<T,U,N_exp>& from_);
 
     //! Computes the inverse of the term on cb using Cholesky
     /*!
@@ -700,11 +700,11 @@ namespace Chroma
         Creg[i][j] = tab[block][0][i] * tab[block][0][j];
 
     unsigned long fact_row = 1;
-    for (int row = 0; row <= N_exp; ++row)
+    for (int row = 0; row <= N_exp -1; ++row)
     {
       if (row != 0) fact_row *= (unsigned long)row;
       unsigned long fact = fact_row * (unsigned long)(row + 1);
-      for (int col = 0; col <= N_exp - row; ++col)
+      for (int col = 0; col <= N_exp - 1 - row; ++col)
       {
         if (col != 0) fact *= (unsigned long)(row + col + 1);
         if (row == 0 && col == 0) continue;
@@ -742,7 +742,7 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
 				   const CloverFermActParams& param_,
-				   const JITExpCloverTermT<T,U>& from, int inv_op)
+				   const JITExpCloverTermT<T,U,N_exp>& from, int inv_op)
   {
     START_CODE();
 
@@ -804,7 +804,7 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
                    const CloverFermActParams& param_,
-                   const JITExpCloverTermT<T,U>& from)
+                   const JITExpCloverTermT<T,U,N_exp>& from)
   {
      QDPIO::cout << "Creating clover term\n";
      create(fs,param_,from,0);
@@ -814,7 +814,7 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::createInv(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
                    const CloverFermActParams& param_,
-                   const JITExpCloverTermT<T,U>& from)
+                   const JITExpCloverTermT<T,U,N_exp>& from)
   {
      QDPIO::cout << "Creating inverse\n";
      create(fs,param_,from,1);

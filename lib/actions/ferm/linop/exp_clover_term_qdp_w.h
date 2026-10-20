@@ -1472,13 +1472,13 @@ namespace Chroma
     // and the factors from using the Caley Hamilton for A^n, for n>5
 
     for(int i=0;i<=5;i++){
-        sum_psi_vec[i]= zero;
+        sum_psi_vec[i][rb[cb]]= zero;
         cchi_vec[i]= zero;
 
         for(int j=0;j<=5;j++){
             (*this).applyCoeff(tmp_psi, psi, isign,cb,i,j);
             (*this).applyPower(ppsi, tmp_psi,isign, cb, j);
-            sum_psi_vec[i]+=ppsi;
+            sum_psi_vec[i][rb[cb]]+=ppsi;
         }
 
         (*this).applyPower(cchi_vec[i], chi, isign, cb,i);
@@ -1552,13 +1552,13 @@ namespace Chroma
     int nterm=0;
     for(int k=0;k<chi.size();k++){       
         for(int i=0;i<=5;i++){
-            sum_psi_vec[nterm]= zero;
+            sum_psi_vec[nterm][rb[cb]]= zero;
             cchi_vec[nterm]= zero;
 
             for(int j=0;j<=5;j++){
                 (*this).applyCoeff(tmp_psi, psi[k], isign,cb,i,j);
                 (*this).applyPower(ppsi, tmp_psi, isign, cb, j);
-                sum_psi_vec[nterm]+=ppsi;
+                sum_psi_vec[nterm][rb[cb]]+=ppsi;
             }
 
             (*this).applyPower(cchi_vec[nterm], chi[k], isign, cb,i);
@@ -1975,12 +1975,12 @@ namespace Chroma
       fact = 1;
       unsigned long fact_row = 1;
 
-      for (unsigned int row = 0; row <= N_exp; ++row)
+      for (int row = 0; row <= N_exp - 1; ++row)
       { 
         if (row!=0)
            fact_row *= (unsigned long)(row);
         fact=fact_row*(unsigned long)(row+1);
-        for(unsigned int col = 0; col <= N_exp-row; ++col)
+        for(int col = 0; col <= N_exp-1-row; ++col)
         {
             if(row!=0 || col!=0) //row=0, col=0 computed above
             {
