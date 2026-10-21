@@ -469,7 +469,6 @@ namespace Chroma
     Handle< FermBC<T,multi1d<U>,multi1d<U> > >      fbc;
     multi1d<U>  u;
     CloverFermActParams          param;
-    LatticeREAL                  tr_log_diag_; // Fill this out during create
 
     OLattice<PComp<PTriDia<RScalar <WORD<REALT> > > > >  tri_dia;
     OLattice<PComp<PTriOff<RComplex<WORD<REALT> > > > >  tri_off;    
@@ -783,8 +782,7 @@ namespace Chroma
     //mesField(f, u);
     //makeClov(f, diag_mass);
         
-    tr_log_diag_ = from.tr_log_diag_;
-   
+  
     tri_dia = from.tri_dia;
     tri_off = from.tri_off;
     if (inv_op == 0)
@@ -870,8 +868,6 @@ namespace Chroma
 
     // Execute the function
     function_tracePowers_exec(function, dummy,diag_mass, tri_dia, tri_off, qc,qc_inv, C);
-
-    tr_log_diag_=0;
 
     END_CODE();
   }
