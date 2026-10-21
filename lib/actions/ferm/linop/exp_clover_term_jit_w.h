@@ -345,9 +345,10 @@ namespace Chroma
     //! Computes the inverse of the term on cb using Cholesky
     /*!
      * \param cb   checkerboard of work (Read)
-     * \return logarithm of the determinant  
+     * \return logarithm of the determinant
+     * derivTrLn = 0 for exp-clover, so cholesDet is never used  
      */
-    Double cholesDet(int cb) const ;
+    Double cholesDet(int cb) const { return Double(0); }
 
     /**
      * Apply a dslash
@@ -1178,22 +1179,6 @@ namespace Chroma
     END_CODE();
   }
   
-  //! Invert
-  /*!
-   * Computes the inverse of the term on cb using Cholesky
-   *
-   * \return logarithm of the determinant  
-   */
-  template<typename T, typename U,int N_exp>
-  Double JITExpCloverTermT<T,U,N_exp>::cholesDet(int cb) const
-  {
-    START_CODE();
-
-    END_CODE();
-
-    return sum(tr_log_diag_, rb[cb]);
-  }
-
   //! TRIACNTR 
   /*! 
    * \ingroup linop
@@ -1463,7 +1448,7 @@ namespace Chroma
 
     qc_r.setup( qc_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
 
-    //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+    //Set the highest power of A^n for the exp sum. This allows for N_exp < 5 to compare with clover 
     int pow_max=5;
     if (N_exp <5)
        pow_max=N_exp;
@@ -1659,7 +1644,7 @@ namespace Chroma
  
     qc_r.setup( qc_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
 
-    //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+    //Set the highest power of A^n for the exp sum. This allows for N_exp < 5 to compare with clover 
     int pow_max=5;
     if (N_exp <5)
        pow_max=N_exp;  

@@ -240,7 +240,7 @@ namespace Chroma
     inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,double mclov)
     {
 
-      //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+      //Set the highest power of A^n for the exp sum. This allows for N_exp < 5 to compare with clover 
  
       RScalar<REALT> qi[6];
       // Row 0
@@ -298,7 +298,7 @@ namespace Chroma
 				   const ExpClovTriang<REALT>& tri_in,
 				   const RComplex<REALT>* const __restrict__ ppsi)
     {
-      //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
+      //Set the highest power of A^n for the exp sum. This allows for N_exp < 5 to compare with clover 
       int pow_max=5;
       if (N_exp <5)
          pow_max=N_exp;
@@ -500,8 +500,9 @@ namespace Chroma
     /*!
      * \param cb   checkerboard of work (Read)
      * \return logarithm of the determinant
+     * derivTrLn = 0 for exp-clover, so cholesDet is never used 
      */
-    Double cholesDet(int cb) const override;
+    Double cholesDet(int cb) const { return Double(0); }
     /**
      * Apply a dslash
      *
@@ -1271,25 +1272,6 @@ namespace Chroma
     QDPIO::cerr << "QDPExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
 
     END_CODE();
-  }
-
-
-  //! Invert
-  /*!
-   * Computes the inverse of the term on cb using Cholesky
-   *
-   * \return logarithm of the determinant
-   */
-  template <typename T, typename U, int N_exp>
-  Double QDPExpCloverTermT<T, U, N_exp>::cholesDet(int cb) const
-  {
-#ifndef QDP_IS_QDPJIT
-    return sum(tr_M, rb[cb]);
-#else
-    assert(!"ni");
-    Double ret = 0.;
-    return ret;
-#endif
   }
 
   //! Take deriv of D
@@ -2095,8 +2077,8 @@ namespace Chroma
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    const RScalar<REALT> diag_mass = diag_mass.elem(site).elem().elem();
-    siteApplicationExp<N_exp,REALT, 1>(diag_mass,cchi, tri[site], ppsi);
+    const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
+    siteApplicationExp<N_exp,REALT, 1>(ddiag_mass,cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
