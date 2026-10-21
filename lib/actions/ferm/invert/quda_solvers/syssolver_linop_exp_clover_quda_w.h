@@ -542,15 +542,15 @@ namespace Chroma
             clov.makeExpClov(0);
             clov.makeExpClov(1);
  
-            clov.packForQUDA(packed_clov, 0,0);
-            clov.packForQUDA(packed_clov, 1,0);
+            clov.packForQUDA(packed_clov, 0);
+            clov.packForQUDA(packed_clov, 1);
 
             
             invclov.makeExpClov(0);
             invclov.makeExpClov(1);
 
-            invclov.packForQUDA(packed_invclov, 0,0);
-            invclov.packForQUDA(packed_invclov, 1,0);
+            invclov.packForQUDA(packed_invclov, 0);
+            invclov.packForQUDA(packed_invclov, 1);
 
             loadCloverQuda(&(packed_clov[0]), &(packed_invclov[0]),&quda_inv_param);
 #else

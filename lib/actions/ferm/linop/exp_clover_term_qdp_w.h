@@ -619,7 +619,7 @@ namespace Chroma
     }
 
     //! PACK UP the Clover term for QUDA library:
-    void packForQUDA(multi1d<QUDAPackedClovSite<REALT>>& quda_pack, int cb, int inv) const;
+    void packForQUDA(multi1d<QUDAPackedClovSite<REALT>>& quda_pack, int cb) const;
     void tracePowers();
     ExpClovTriang<REALT>* tri;
 
@@ -2514,7 +2514,6 @@ namespace Chroma
       int cb;
       multi1d<QUDAPackedClovSite<R>>& quda_array;
       const ExpClovTriang<R>* tri;
-      Real mclov;
     };
 
     template <typename R>
@@ -2526,8 +2525,6 @@ namespace Chroma
 
       multi1d<QUDAPackedClovSite<R>>& quda_array = a->quda_array;
       const ExpClovTriang<R>* tri = a->tri;
-      const double mclov=  (a->mclov).elem().elem().elem().elem();
-
       const int idtab[15] = {0, 1, 3, 6, 10, 2, 4, 7, 11, 5, 8, 12, 9, 13, 14};
 
       for (int ssite = lo; ssite < hi; ++ssite) {
@@ -2574,7 +2571,7 @@ namespace Chroma
 
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::packForQUDA(
-    multi1d<QUDAPackedClovSite<typename WordType<T>::Type_t>>& quda_array, int cb,int inv) const
+    multi1d<QUDAPackedClovSite<typename WordType<T>::Type_t>>& quda_array, int cb) const
   {
     typedef typename WordType<T>::Type_t REALT;
     int num_sites = rb[cb].siteTable().size();
@@ -2583,15 +2580,7 @@ namespace Chroma
     //Pass the new exp clov tri
     //typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
 
-    Real mclov= RealT(Nd) + param.Mass - 1.0;
-    if(inv==1){
-        mclov= 1.0/mclov ;
-        //QDPIO::cout << "\nmclov^-1 = " << mclov<<"\n";
-    }else{
-        //QDPIO::cout << "\nmclov = " << mclov<<"\n";
-    }
-    mclov=1.0;
-    QDPExpCloverEnv::QUDAPackArgs<REALT> args = {cb, quda_array, exp_tri,mclov};
+    QDPExpCloverEnv::QUDAPackArgs<REALT> args = {cb, quda_array, exp_tri};
 
     dispatch_to_threads(num_sites, args, QDPExpCloverEnv::qudaPackSiteLoop<REALT>);
   }
