@@ -791,14 +791,15 @@ namespace Chroma
 	// Accumulate all the trace spin outer products 
 	U s_xy_dag = zero;
 
-	for(int i=0; i < chi.size(); i++) { 
-	  T ferm_tmp = Gamma(mu_nu_index)*psi[i];
-	  s_xy_dag += traceSpin( outerProduct(ferm_tmp,chi[i]));
+	for(int i=0; i < chi.size(); i++) {
+      T ferm_tmp; 
+	  ferm_tmp[rb[cb]]  = Gamma(mu_nu_index)*psi[i];
+	  s_xy_dag[rb[cb]]  += traceSpin( outerProduct(ferm_tmp,chi[i]));
 	}
 
     //For exp-clover, the psi and chi can be applied directly to the field, and thus the trace spin is zero?
 
-	s_xy_dag*= Real(factor);
+	s_xy_dag[rb[cb]] *= Real(factor);
 
 	// Compute contributions
 	deriv_loops(mu, nu, cb, ds_tmp_mu, ds_tmp_nu, s_xy_dag);

@@ -1092,13 +1092,8 @@ namespace Chroma
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::choles(int cb)
   {
-    START_CODE();
-
-    // When you are doing the cholesky - also fill out the trace_log_diag piece) 
-    // Switch to LDL^\dag inversion
-    QDPIO::cerr << "QDPExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
-
-    END_CODE();
+    //This is not needed for exp-clover
+    //QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
   }
 
   //! Take deriv of D
