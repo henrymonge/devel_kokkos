@@ -289,17 +289,6 @@ namespace QDP
 namespace Chroma 
 { 
 
-#if 0
-  template<typename R>
-  struct QUDAPackedClovSite {
-    R diag1[6];
-    R offDiag1[15][2];
-    R diag2[6];
-    R offDiag2[15][2];
-  };
-#endif
-
-
   template<typename T, typename U,int N_exp = N_exp_default>
   class JITExpCloverTermT : public ExpCloverTermBase<T, U>
   {
@@ -368,9 +357,6 @@ namespace Chroma
      * \param cb      Checkerboard of OUTPUT std::vector               (Read) 
      */
     void apply(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
-
-    // chi = sum_j C[i][j] A^j psi  (Horner, one launch)
-    void applyCoeffSum(T& chi, const T& psi, enum PlusMinus isign, int cb, int pow_i) const;
 
     // chi = sum_j C[i][j] * pp[j]   (pp[j] = A^j psi, precomputed; one launch per row i)
     void applyCoeffCombine(T& chi, const multi1d<T>& pp, int offset,
@@ -1871,125 +1857,6 @@ namespace Chroma
     END_CODE();
   }
 
-  template<typename T, typename X, typename Y, typename W>
-  void function_apply_coeff_sum_exec(JitFunction& function,
-                                     T& chi,
-                                     const T& psi,
-                                     const X& tri_dia,
-                                     const Y& tri_off,
-                                     const W& Cv,
-                                     const Subset& s)
-  {
-#ifdef QDP_DEEP_LOG
-    function.type_W = typeid(REAL).name();
-    function.set_dest_id( chi.getId() );
-    function.set_is_lat(true);
-#endif
-
-    AddressLeaf addr_leaf(s);
-
-    // Order must match the build function
-    forEach(chi,     addr_leaf, NullCombine());
-    forEach(psi,     addr_leaf, NullCombine());
-    forEach(tri_dia, addr_leaf, NullCombine());
-    forEach(tri_off, addr_leaf, NullCombine());
-    forEach(Cv,      addr_leaf, NullCombine());
-
-    int th_count = s.numSiteTable();
-    WorkgroupGuardExec workgroupGuardExec(th_count);
-
-    std::vector<QDPCache::ArgKey> ids;
-    workgroupGuardExec.check(ids);
-    ids.push_back( s.getIdSiteTable() );
-    for(unsigned i=0; i < addr_leaf.ids.size(); ++i)
-      ids.push_back( addr_leaf.ids[i] );
-    jit_launch(function, th_count, ids);
-  }
-
-
-  template<typename T, typename X, typename Y, typename W>
-  void function_apply_coeff_sum_build(JitFunction& function,
-                                      const T& chi,
-                                      const T& psi,
-                                      const X& tri_dia,
-                                      const Y& tri_off,
-                                      const W& Cv,
-                                      const int pow_i,      // baked into the kernel
-                                      const Subset& s)
-  {
-    llvm_start_new_function("apply_coeff_sum", __PRETTY_FUNCTION__);
-
-    WorkgroupGuard workgroupGuard;
-    ParamRef p_site_table = llvm_add_param<int*>();
-    ParamLeafScalar param_leaf;
-
-    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
-    TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
-    TJIT psi_jit(forEach(psi, param_leaf, TreeCombine()));
-    typedef typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t CHI_R;
-    CHI_R psi_r, chi_r, tmp_r;
-
-    typedef typename LeafFunctor<X, ParamLeafScalar>::Type_t  XJIT;
-    XJIT tri_dia_jit(forEach(tri_dia, param_leaf, TreeCombine()));
-    typedef typename REGType< typename XJIT::Subtype_t >::Type_t TRIDIA_R;
-    TRIDIA_R tri_dia_r;
-
-    typedef typename LeafFunctor<Y, ParamLeafScalar>::Type_t  YJIT;
-    YJIT tri_off_jit(forEach(tri_off, param_leaf, TreeCombine()));
-    typedef typename REGType< typename YJIT::Subtype_t >::Type_t TRIOFF_R;
-    TRIOFF_R tri_off_r;
-
-    typedef typename LeafFunctor<W, ParamLeafScalar>::Type_t  WJIT;
-    WJIT Cv_jit(forEach(Cv, param_leaf, TreeCombine()));
-    typename REGType< typename WJIT::Subtype_t >::Type_t Cv_r;
-
-    llvm::Value* r_idx_thread = llvm_thread_idx();
-    workgroupGuard.check(r_idx_thread);
-    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table, r_idx_thread );
-
-    auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced, r_idx);
-    psi_r.setup(     psi_jit.elem(JitDeviceLayout::Coalesced, r_idx) );
-    tri_dia_r.setup( tri_dia_jit.elem(JitDeviceLayout::Coalesced, r_idx) );
-    tri_off_r.setup( tri_off_jit.elem(JitDeviceLayout::Coalesced, r_idx) );
-    Cv_r.setup(      Cv_jit.elem(JitDeviceLayout::Coalesced, r_idx) );
-
-    const int n = 2*Nc;
-    const int i = pow_i;
-
-    // Horner start: chi = C[i][5] * psi
-    {
-      auto c0 = Cv_r.elem(0).elem(i).elem(5);
-      auto c1 = Cv_r.elem(1).elem(i).elem(5);
-      for (int k = 0; k < n; ++k)
-      {
-        chi_r.elem((0*n+k)/3).elem((0*n+k)%3) = c0 * psi_r.elem((0*n+k)/3).elem((0*n+k)%3);
-        chi_r.elem((1*n+k)/3).elem((1*n+k)%3) = c1 * psi_r.elem((1*n+k)/3).elem((1*n+k)%3);
-      }
-    }
-
-    // Horner steps: chi = A chi + C[i][j] psi,  j = 4 .. 0
-    for (int j = 4; j >= 0; --j)
-    {
-      applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,0>(tmp_r, chi_r, tri_dia_r, tri_off_r);
-      applySiteBlock<CHI_R,TRIDIA_R,TRIOFF_R,1>(tmp_r, chi_r, tri_dia_r, tri_off_r);
-
-      auto c0 = Cv_r.elem(0).elem(i).elem(j);
-      auto c1 = Cv_r.elem(1).elem(i).elem(j);
-      for (int k = 0; k < n; ++k)
-      {
-        chi_r.elem((0*n+k)/3).elem((0*n+k)%3) = tmp_r.elem((0*n+k)/3).elem((0*n+k)%3)
-                                              + c0 * psi_r.elem((0*n+k)/3).elem((0*n+k)%3);
-        chi_r.elem((1*n+k)/3).elem((1*n+k)%3) = tmp_r.elem((1*n+k)/3).elem((1*n+k)%3)
-                                              + c1 * psi_r.elem((1*n+k)/3).elem((1*n+k)%3);
-      }
-    }
-
-    chi_j = chi_r;
-
-    jit_get_function(function);
-  }
-
-
   template<typename T, typename W>
   void function_coeff_combine_exec(JitFunction& function,
                                    T& chi,
@@ -2106,28 +1973,6 @@ namespace Chroma
 
     END_CODE();
   }
-
-
-  template<typename T, typename U, int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::applyCoeffSum(T& chi, const T& psi,
-                                                   enum PlusMinus isign, int cb, int pow_i) const
-  {
-    START_CODE();
-
-    // One kernel per row i (pow_i is baked in at build time)
-    static std::map<int, JitFunction> func_cache;
-    JitFunction& function = func_cache[pow_i];
-
-    if (function.empty())
-      function_apply_coeff_sum_build(function, chi, psi, tri_dia, tri_off, C, pow_i, rb[cb]);
-
-    function_apply_coeff_sum_exec(function, chi, psi, tri_dia, tri_off, C, rb[cb]);
-
-    (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
-
-    END_CODE();
-  }
-
 
   template <typename T, typename U,int N_exp>
   //void JITExpCloverTermT<T, U, N_exp>::applyInv(T& chi, const T& psi, enum PlusMinus isign,

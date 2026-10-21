@@ -580,9 +580,6 @@ namespace Chroma
     void applyRef(T& chi, const T& psi, enum PlusMinus isign, int N = N_exp) const;
 
     // Apply a power of a matrix from A^0 to A^5
-    void applyPowerSite(T& chi, const T& psi, enum PlusMinus isign, int site, int power = 1) const;
-
-    // Apply a power of a matrix from A^0 to A^5
     void applyPower(T& chi, const T& psi, enum PlusMinus isign, int cb, int power = 1) const;
 
     // Apply coefficients to powers of a matrix A
@@ -600,9 +597,6 @@ namespace Chroma
 
     // Apply exponential operator at a site
     void applySite(T& chi, const T& psi, enum PlusMinus isign, int site) const override;
-
-    // Apply exponential operator at a site
-    void applySiteInv(T& chi, const T& psi, enum PlusMinus isign, int site) const;
 
     inline void applyUnexp(T& chi, const T& psi, enum PlusMinus isign, int cb) const
     {
@@ -632,9 +626,6 @@ namespace Chroma
     void makeClov(const multi1d<U>& f, const RealT& diag_mass);
 
     // void tracePowers();
-
-    //! Compute the approximation coefficient
-    void exponentiate();
 
     //! Get the u field
     const multi1d<U>& getU() const override
@@ -1478,58 +1469,7 @@ namespace Chroma
     END_CODE();
   }
 
-  /*! CHLCLOVMS - Cholesky decompose the clover mass term and uses it to
-   *              compute  lower(A^-1) = lower((L.L^dag)^-1)
-   *              Adapted from Golub and Van Loan, Matrix Computations, 2nd, Sec 4.2.4
-   *
-   * Arguments:
-   *
-   * \param DetP         flag whether to compute determinant (Read)
-   * \param logdet       logarithm of the determinant        (Write)
-   * \param cb           checkerboard of work                (Read)
-   */
-
-  /**
-   * Apply a dslash
-   *
-   * Performs the operation
-   *
-   *  chi <-   (L + D + L^dag) . psi
-   *
-   * where
-   *   L       is a lower triangular matrix
-   *   D       is the real diagonal. (stored together in type TRIANG)
-   *
-   * Arguments:
-   * \param chi     result                                      (Write)
-   * \param psi     source                                      (Read)
-   * \param isign   D'^dag or D'  ( MINUS | PLUS ) resp.        (Read)
-   * \param cb      Checkerboard of OUTPUT std::vector               (Read)
-   */
-  template <typename T, typename U, int N_exp>
-  void QDPExpCloverTermT<T, U, N_exp>::applyPowerSite(T& chi, const T& psi, enum PlusMinus isign,
-						      int site, int power) const
-  {
-#ifndef QDP_IS_QDPJIT
-    START_CODE();
-
-    if (Ns != 4)
-    {
-      QDPIO::cerr << __func__ << ": CloverTerm::applySite requires Ns==4" << std::endl;
-      QDP_abort(1);
-    }
-
-    RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
-    const RComplex<REALT>* const ppsi =
-      (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-
-    siteApplicationPower<REALT>(cchi, tri, ppsi, power);
-
-    END_CODE();
-#endif
-  }
-
-  /**
+   /**
    * Apply a dslash
    *
    * Performs the operation
@@ -1566,28 +1506,6 @@ namespace Chroma
     const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
     siteApplicationExp<N_exp>(ddiag_mass, cchi, tri[site], ppsi);
 
-    END_CODE();
-#endif
-  }
-
-  template <typename T, typename U, int N_exp>
-  void QDPExpCloverTermT<T, U, N_exp>::applySiteInv(T& chi, const T& psi, enum PlusMinus isign,
-						    int site) const
-  {
-#ifndef QDP_IS_QDPJIT
-    START_CODE();
-
-    if (Ns != 4)
-    {
-      QDPIO::cerr << __func__ << ": CloverTerm::applySite requires Ns==4" << std::endl;
-      QDP_abort(1);
-    }
-
-    RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
-    const RComplex<REALT>* const ppsi =
-      (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
-    siteApplicationExp<N_exp,REALT, 1>(ddiag_mass,cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
@@ -1727,46 +1645,6 @@ namespace Chroma
       END_CODE();
 #endif
     } // Function
-
-
-#if 0
-    template<typename T>
-    inline
-    void siteExponentiateClov(ExpClovTriang<T>& tri_in)
-    {
-      RComplex<T> zip( RScalar<T>((T)0), RScalar<T>((T)0) );
-      for(int block=0; block < 2; ++block) {
-        // q0 * I -- no offdiag piece in I
-
-        for(int i=0; i < 6; ++i) {
-          tri_in.Exp[0].diag[block][i] = (Real(Nd) + param.Mass)*tri_in.q[block][0];
-          tri_in.Exp[1].diag[block][i] = (Real(Nd) + param.Mass)*tri_in.qinv[block][0];
-        }
-
-
-        for(int ord=1; ord <= 5; ++ord) {
-          for(int i=0; i < 6; ++i) {
-            tri_in.Exp[0].diag[block][i] += tri_in.q[block][ord]*tri_in.A[ord-1].diag[block][i];
-            tri_in.Exp[1].diag[block][i] += tri_in.qinv[block][ord]*tri_in.A[ord-1].diag[block][i];
-          }
-        }
-
-        for(int i=0; i < 15; ++i) {
-          tri_in.Exp[0].offd[block][i] = zip;
-          tri_in.Exp[1].offd[block][i] = zip;
-        }
-
-        for(int ord=1; ord <= 5; ++ord) {
-          for(int i=0; i < 15; ++i) {
-            tri_in.Exp[0].offd[block][i] += tri_in.q[block][ord]*tri_in.A[ord-1].offd[block][i];
-            tri_in.Exp[1].offd[block][i] += tri_in.qinv[block][ord]*tri_in.A[ord-1].offd[block][i];
-          }
-        }
-
-       
-      }
-    }
-#endif
 
     template <typename T>
     struct makeExpClovArgs {
