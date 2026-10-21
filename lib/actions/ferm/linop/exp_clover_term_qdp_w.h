@@ -236,7 +236,7 @@ namespace Chroma
     }
 
 
-    template < typename REALT, int block = 0>
+    template < int N_exp, typename REALT, int block = 0>
     inline void siteApplicationExpPack(ExpClovTriang<REALT>& tri_out,ExpClovTriang<REALT>& tri_in,double mclov)
     {
 
@@ -250,8 +250,8 @@ namespace Chroma
 
  
       int pow_max=5;
-      if (N_exp_default <5)
-         pow_max=N_exp_default;
+      if (N_exp <5)
+         pow_max=N_exp;
 
       //Set the output clov triang to 1+A (power 1)
   
@@ -292,110 +292,7 @@ namespace Chroma
       } 
 }
 
-#if 0
-
-    template <typename REALT, int i = 0>
-    inline void siteApplicationExp(RComplex<REALT>* __restrict__ cchi,
-				   const ExpClovTriang<REALT>& tri_in,
-				   const RComplex<REALT>* const __restrict__ ppsi)
-    {
-      //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
-      int pow_max=5;
-      if (N_exp_default <5)
-         pow_max=N_exp_default;
-
-      // Accumulate exponential from only A
-      RComplex<REALT> tmp[12];
-      // Top block
-      // chi = psi
-      for (int cspin = 0; cspin < 6; ++cspin)
-      {
-	cchi[cspin] = ppsi[cspin];
-      }
-
-      // Main loop:  chi = psi + q[i]/q[i-1] A chi
-      for (int pow = pow_max; pow > 0; --pow)
-      {
-	siteApplicationBlock<REALT, 0>(tmp, tri_in.A, cchi);
-
-	for (int cspin = 0; cspin < 6; cspin++)
-	{
-
-	  if constexpr (i == 0)
-	  {
-	    // Operator
-	    cchi[cspin] = ppsi[cspin] + (tri_in.q[0][pow] / tri_in.q[0][pow - 1]) * tmp[cspin];
-	  }
-	  else
-	  {
-	    // Inverse
-	    cchi[cspin] =
-	      ppsi[cspin] + (tri_in.qinv[0][pow] / tri_in.qinv[0][pow - 1]) * tmp[cspin];
-	  }
-	}
-      }
-
-      for (int cspin = 0; cspin < 6; ++cspin)
-      {
-	if constexpr (i == 0)
-	{
-	  // Operator
-	  cchi[cspin] *= tri_in.q[0][0];
-	}
-	else
-	{
-	  // inverse
-	  cchi[cspin] *= tri_in.qinv[0][0];
-	}
-      }
-
-      // Second Block
-      // chi = psi
-      for (int cspin = 6; cspin < 12; ++cspin)
-      {
-	cchi[cspin] = ppsi[cspin];
-      }
-
-      // Main loop:  chi = psi + q[i]/q[i-1] A chi
-      for (int pow = pow_max; pow > 0; --pow)
-      {
-	siteApplicationBlock<REALT, 1>(tmp, tri_in.A, cchi);
-
-	for (int cspin = 6; cspin < 12; cspin++)
-	{
-	  if constexpr (i == 0)
-	  {
-	    // Operator
-	    cchi[cspin] = ppsi[cspin] + (tri_in.q[1][pow] / tri_in.q[1][pow - 1]) * tmp[cspin];
-	  }
-	  else
-	  {
-	    // Inverse
-	    cchi[cspin] =
-	      ppsi[cspin] + (tri_in.qinv[1][pow] / tri_in.qinv[1][pow - 1]) * tmp[cspin];
-	  }
-	}
-      }
-
-      for (int cspin = 6; cspin < 12; ++cspin)
-      {
-
-	if constexpr (i == 0)
-	{
-	  // Operator
-	  cchi[cspin] *= tri_in.q[1][0];
-	}
-	else
-	{
-	  // Inverse
-	  cchi[cspin] *= tri_in.qinv[1][0];
-	}
-      }
-
-    }
-#else
-
-    template <typename REALT, int i = 0>
+    template <int N_exp, typename REALT, int i = 0>
     inline void siteApplicationExp(const RScalar<REALT> ddiag_mass,
                    RComplex<REALT>* __restrict__ cchi,
 				   const ExpClovTriang<REALT>& tri_in,
@@ -403,8 +300,8 @@ namespace Chroma
     {
       //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
       int pow_max=5;
-      if (N_exp_default <5)
-         pow_max=N_exp_default;
+      if (N_exp <5)
+         pow_max=N_exp;
 
       // Accumulate exponential from only A
       RComplex<REALT> tmp[12];
@@ -495,11 +392,6 @@ namespace Chroma
       }
 
     }
-
-
-
-#endif
-
 
    //Apply coefficient to site
     template <typename REALT>
@@ -1472,7 +1364,7 @@ namespace Chroma
     // and the factors from using the Caley Hamilton for A^n, for n>5
 
     for(int i=0;i<=5;i++){
-        sum_psi_vec[i][rb[cb]]= zero;
+        sum_psi_vec[i]= zero;
         cchi_vec[i]= zero;
 
         for(int j=0;j<=5;j++){
@@ -1552,7 +1444,7 @@ namespace Chroma
     int nterm=0;
     for(int k=0;k<chi.size();k++){       
         for(int i=0;i<=5;i++){
-            sum_psi_vec[nterm][rb[cb]]= zero;
+            sum_psi_vec[nterm]= zero;
             cchi_vec[nterm]= zero;
 
             for(int j=0;j<=5;j++){
@@ -2181,7 +2073,7 @@ namespace Chroma
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
     //siteApplicationExp(cchi, tri[site], ppsi);
     const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
-    siteApplicationExp(ddiag_mass, cchi, tri[site], ppsi);
+    siteApplicationExp<N_exp>(ddiag_mass, cchi, tri[site], ppsi);
 
     END_CODE();
 #endif
@@ -2204,7 +2096,7 @@ namespace Chroma
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
     const RScalar<REALT> diag_mass = diag_mass.elem(site).elem().elem();
-    siteApplicationExp<REALT, 1>(diag_mass,cchi, tri[site], ppsi);
+    siteApplicationExp<N_exp,REALT, 1>(diag_mass,cchi, tri[site], ppsi);
     END_CODE();
 #endif
   }
@@ -2396,7 +2288,7 @@ namespace Chroma
     };
 
 
-    template <typename T>
+    template <int N_exp, typename T>
     void makeExpClovSiteLoop(int lo, int hi, int MyId, makeExpClovArgs<T>* arg)
     {
 #ifndef QDP_IS_QDPJIT
@@ -2420,8 +2312,8 @@ namespace Chroma
          int site = rb[cb].siteTable()[ssite];
 
         //need to pass the reference to tr_Minv
-         siteApplicationExpPack<REALT,0>(tri_out[site],tri[site], mclov);
-         siteApplicationExpPack<REALT,1>(tri_out[site],tri[site], mclov);
+         siteApplicationExpPack<N_exp,REALT,0>(tri_out[site],tri[site], mclov);
+         siteApplicationExpPack<N_exp,REALT,1>(tri_out[site],tri[site], mclov);
 
       }
       END_CODE();
@@ -2430,7 +2322,7 @@ namespace Chroma
 
 
 
-    template <typename T, int inv = 0>
+    template <int N_exp, typename T, int inv = 0>
     void applySiteLoop(int lo, int hi, int MyId, ApplyArgs<T>* arg)
     {
 #ifndef QDP_IS_QDPJIT
@@ -2457,7 +2349,7 @@ namespace Chroma
 	const RComplex<REALT>* const ppsi =
 	  (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
         const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
-    siteApplicationExp<REALT, inv>(ddiag_mass,cchi, tri[site], ppsi);
+    siteApplicationExp<N_exp,REALT, inv>(ddiag_mass,cchi, tri[site], ppsi);
 
 	//siteApplicationExp<REALT, inv>(cchi, tri[site], ppsi);
       }
@@ -2663,7 +2555,7 @@ namespace Chroma
 
     // The dispatch function is at the end of the file
     // ought to work for non-threaded targets too...
-    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<T>);
+    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<N_exp,T>);
     
     //(*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
@@ -2723,7 +2615,7 @@ namespace Chroma
 
     // The dispatch function is at the end of the file
     // ought to work for non-threaded targets too...
-    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::applySiteLoop<T, 0>);
+    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::applySiteLoop<N_exp,T, 0>);
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();
@@ -2749,7 +2641,7 @@ namespace Chroma
 
     // The dispatch function is at the end of the file
     // ought to work for non-threaded targets too...
-    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::applySiteLoop<T, 1>);
+    dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::applySiteLoop<N_exp,T, 1>);
     (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
 
     END_CODE();

@@ -1394,7 +1394,7 @@ namespace Chroma
       }
 
 
-  template<typename RealT, typename X,typename Y, typename Q>
+  template<int N_exp, typename RealT, typename X,typename Y, typename Q>
   void function_make_exp_tri_clov_build( JitFunction& function,
                   const RealT& diag_mass,
                   const X& exp_tri_dia,
@@ -1465,9 +1465,8 @@ namespace Chroma
 
     //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
     int pow_max=5;
-    if (N_exp_default <5)
-       pow_max=N_exp_default;
-   
+    if (N_exp <5)
+       pow_max=N_exp;
     
     RScalarREG<QDP::WordREG<REALT>> qi[2][6];
 
@@ -1597,7 +1596,7 @@ namespace Chroma
 }
 
 
-  template<typename RealT,typename T, typename X,typename Y, typename Q>
+  template<int N_exp,typename RealT,typename T, typename X,typename Y, typename Q>
   void function_apply_exp_clov_build( JitFunction& function,
                   const RealT& diag_mass,
 				  const T& chi,
@@ -1662,8 +1661,8 @@ namespace Chroma
 
     //Set the highest power of A^n for the exp sum. This allows for N_exp_default < 5 to compare with clover 
     int pow_max=5;
-    if (N_exp_default <5)
-       pow_max=N_exp_default;  
+    if (N_exp <5)
+       pow_max=N_exp;  
 
     int n = 2*Nc;
     for(int cspin = 0; cspin < n; ++cspin)
@@ -1929,7 +1928,7 @@ namespace Chroma
     static JitFunction function;
 
     if (function.empty()){
-      function_apply_exp_clov_build( function, diag_mass,  chi, psi, tri_dia, tri_off, qc, rb[cb]);
+      function_apply_exp_clov_build<N_exp>( function, diag_mass,  chi, psi, tri_dia, tri_off, qc, rb[cb]);
 
     }
 
@@ -2392,7 +2391,7 @@ namespace Chroma
     RealT inv_diag_mass = 1.0 /diag_mass;
 
     if (function.empty()){
-      function_apply_exp_clov_build( function, inv_diag_mass,  chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
+      function_apply_exp_clov_build<N_exp>( function, inv_diag_mass,  chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
     }
     // Execute the function
     function_apply_exp_clov_exec( function, inv_diag_mass, chi, psi, tri_dia, tri_off, qc_inv, rb[cb]);
@@ -2515,7 +2514,7 @@ namespace Chroma
 
     
     if (function.empty())
-       function_make_exp_tri_clov_build(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
+       function_make_exp_tri_clov_build<N_exp>(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
 
     // Execute the function
     function_make_exp_tri_clov_exec(function, diag_mass, exp_tri_dia, exp_tri_off, tri_dia , tri_off, qc, rb[cb]);
