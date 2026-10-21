@@ -369,10 +369,6 @@ namespace Chroma
      */
     void apply(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
 
-                
-    //apply Coefficients to fermion 
-    void applyCoeff(T& chi, const T& psi, enum PlusMinus isign,int cb, int pow_i, int pow_j) const;
-
     // chi = sum_j C[i][j] A^j psi  (Horner, one launch)
     void applyCoeffSum(T& chi, const T& psi, enum PlusMinus isign, int cb, int pow_i) const;
 
@@ -382,9 +378,6 @@ namespace Chroma
 
     // Apply a power of a matrix from A^0 to A^5
     void applyPower(T& chi, const T& psi, enum PlusMinus isign, int cb, int power = 1) const;
-
-    // Apply a power of a matrix from A^0 to A^5 times the scaling factor C
-    void applyScaledPower(T& chi, const T& psi, enum PlusMinus isign, int cb, LatticeREAL C, int power = 1) const;
 
     // Apply exponential operator
     void applyInv(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
@@ -1165,7 +1158,7 @@ namespace Chroma
     U f5 = f[5] * getCloverCoeff(2,3);    
 
     static JitFunction function;
-    T dummy;
+
     if (function.empty())
       function_make_exp_clov_build(function, diag_mass, f0,f1,f2,f3,f4,f5, tri_dia , tri_off );
 
@@ -1212,25 +1205,8 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::triacntr(U& B, int mat, int cb) const
   {
-    START_CODE();
-
-    B = zero;
-
-    if ( mat < 0  ||  mat > 15 )
-      {
-	QDPIO::cerr << __func__ << ": Gamma out of range: mat = " << mat << std::endl;
-	QDP_abort(1);
-      }
-
-    static JitFunction function;
-
-    if (function.empty())
-      function_triacntr_build<U>( function, B, tri_dia, tri_off, mat, rb[cb] );
-
-    // Execute the function
-    function_triacntr_exec(function, B, tri_dia, tri_off, mat, rb[cb] );
-
-    END_CODE();
+    QDPIO::cerr << "JITExpCloverTerm::triacntr: not used for exp-clover" << std::endl;
+    QDP_abort(1);   
   }
 
 
@@ -1797,85 +1773,7 @@ namespace Chroma
   }
 
 
-
-
-
-  template<typename T>
-  void function_copy_exec(JitFunction& function,
-				T& chi,
-				const T& psi,
-				const Subset& s)
-  {
-#ifdef QDP_DEEP_LOG
-    function.type_W = typeid(REAL).name();
-    function.set_dest_id( chi.getId() );
-    function.set_is_lat(true);
-#endif
-   
-    AddressLeaf addr_leaf(s);
-
-    forEach(chi, addr_leaf, NullCombine());
-    forEach(psi, addr_leaf, NullCombine());
-
-    int th_count = s.numSiteTable();
-    WorkgroupGuardExec workgroupGuardExec(th_count);
-
-    std::vector<QDPCache::ArgKey> ids;
-    workgroupGuardExec.check(ids);
-    ids.push_back( s.getIdSiteTable() );
-
-    for(unsigned i=0; i < addr_leaf.ids.size(); ++i) 
-      ids.push_back( addr_leaf.ids[i] );
-    jit_launch(function,th_count,ids);
-
-  }
-
-  template<typename T>
-  void function_copy_build( JitFunction& function,
-                  const T& chi,
-                  const T& psi,
-				  const Subset& s)
-  {
-    llvm_start_new_function("copy",__PRETTY_FUNCTION__);
-
-    WorkgroupGuard workgroupGuard;
-    ParamRef p_site_table = llvm_add_param<int*>();
-
-    ParamLeafScalar param_leaf;
-
-    typedef typename WordType<T>::Type_t REALT;
-
-    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
-    TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
-    TJIT psi_jit(forEach(psi, param_leaf, TreeCombine()));
-    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t psi_r;
-    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t chi_r;
-
-    llvm::Value* r_idx_thread = llvm_thread_idx();
-
-    workgroupGuard.check(r_idx_thread);
-
-    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
-
-    auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
-
-    typedef typename WordType<T>::Type_t REALT;
-
-    int n = 2*Nc;
-    for(int cspin = 0; cspin < n; ++cspin)
-    {
-        chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-        chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
-        // cchi[1*n+i] =  ppsi[1*n+i];
-    }
-
-    chi_j = chi_r;
-
-    jit_get_function(function);
-  }
-
-  /**
+   /**
    * Apply a dslash
    *
    * Performs the operation
@@ -1947,128 +1845,6 @@ namespace Chroma
 
     END_CODE();
 
-  }
-
-
-
-  template<typename T, typename W>
-  void function_apply_coeff_exec(JitFunction& function,
-                T& chi,
-                const T& psi,
-                const int pow_i,
-                const int pow_j,
-                const W& Cv,
-                const Subset& s)
-  {
-#ifdef QDP_DEEP_LOG
-    function.type_W = typeid(REAL).name();
-    function.set_dest_id( chi.getId() );
-    function.set_is_lat(true);
-#endif
-
-    AddressLeaf addr_leaf(s);
-
-    forEach(chi, addr_leaf, NullCombine());
-    forEach(psi, addr_leaf, NullCombine());
-
-    forEach(Cv, addr_leaf, NullCombine());
-
-    int th_count = s.numSiteTable();
-    WorkgroupGuardExec workgroupGuardExec(th_count);
-
-    std::vector<QDPCache::ArgKey> ids;
-    workgroupGuardExec.check(ids);
-    ids.push_back( s.getIdSiteTable() );
-
-    for(unsigned i=0; i < addr_leaf.ids.size(); ++i)
-      ids.push_back( addr_leaf.ids[i] );
-    jit_launch(function,th_count,ids);
-
-  }
-
-
-  template<typename T,typename W>
-  void function_apply_coeff_build( JitFunction& function,
-                  const T& chi,
-                  const T& psi,
-                  const int pow_i,
-                  const int pow_j,
-                  const W& Cv,
-                  const Subset& s)
-  {
-
-    //QDPIO::cout << "BUILD apply_coeff  pow_i=" << pow_i << " pow_j=" << pow_j << std::endl;
-    llvm_start_new_function("apply_coeff",__PRETTY_FUNCTION__);
-
-    WorkgroupGuard workgroupGuard;
-    ParamRef p_site_table = llvm_add_param<int*>();
-    ParamLeafScalar param_leaf;
-
-    typedef typename WordType<T>::Type_t REALT;
-
-    typedef typename LeafFunctor<T, ParamLeafScalar>::Type_t  TJIT;
-    TJIT chi_jit(forEach(chi, param_leaf, TreeCombine()));
-    TJIT psi_jit(forEach(psi, param_leaf, TreeCombine()));
-    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t psi_r;
-    typename REGType< typename ScalarType<typename TJIT::Subtype_t>::Type_t >::Type_t chi_r;
-
-    typedef typename LeafFunctor<W, ParamLeafScalar>::Type_t  WJIT;
-    WJIT Cv_jit(forEach(Cv, param_leaf, TreeCombine()));
-    typename REGType< typename WJIT::Subtype_t >::Type_t Cv_r;
-
-
-    llvm::Value* r_idx_thread = llvm_thread_idx();
-
-    workgroupGuard.check(r_idx_thread);
-
-    llvm::Value* r_idx = llvm_array_type_indirection<int>( p_site_table , r_idx_thread );
-
-
-    auto Cv_j     = Cv_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-    Cv_r.setup( Cv_j );
-
-    auto chi_j = chi_jit.elem(JitDeviceLayout::Coalesced,r_idx);
-
-    chi_r.setup( chi_j ); 
-    psi_r.setup( psi_jit.elem(JitDeviceLayout::Coalesced,r_idx) );
-
-    int n = 2*Nc;
-
-    const int p_i = pow_i;      // host constants, baked into this kernel
-    const int p_j = pow_j;
-
-    auto c0_r = Cv_r.elem(0).elem(p_i).elem(p_j);   // hoisted: independent of cspin
-    auto c1_r = Cv_r.elem(1).elem(p_i).elem(p_j);
-
-    for(int cspin = 0; cspin < n; ++cspin)
-    {
-       chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) += c0_r*psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-       chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) += c1_r*psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
-    }
-
-    chi_j = chi_r;
-
-    jit_get_function(function);
-  }
-
-
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::applyCoeff(T& chi, const T& psi,
-                  enum PlusMinus isign, int cb, int pow_i, int pow_j) const
-  {
-    START_CODE();
-
-    //static JitFunction function;
-    static std::map<std::pair<int,int>, JitFunction> func_cache;
-    JitFunction& function = func_cache[std::make_pair(pow_i, pow_j)]; //ij
-    if (function.empty())
-      function_apply_coeff_build( function, chi, psi,pow_i, pow_j, C, rb[cb]); //ij
-    
-    // Execute the function
-    function_apply_coeff_exec( function, chi, psi, pow_i,pow_j, C, rb[cb]);  //ij
-    (*this).getFermBC().modifyF(chi, QDP::rb[cb]);
-
-    END_CODE();
   }
 
   template<typename T, typename U,int N_exp>
@@ -2386,71 +2162,6 @@ namespace Chroma
 
 
 #ifndef  BUILD_QUDA_DEVIFACE_CLOVER
-
-#if 0
-  namespace QDPCloverEnv {
-
-    template<typename R,typename TD,typename TO> 
-    struct QUDAPackArgs { 
-      int cb;
-      multi1d<QUDAPackedClovSite<R> >& quda_array;
-      const TD&  tri_dia;
-      const TO&  tri_off;
-    };
-    
-    template<typename R,typename TD,typename TO>
-    void qudaPackSiteLoop(int lo, int hi, int myId, QUDAPackArgs<R,TD,TO>* a) {
-      int cb = a->cb;
-      int Ns2 = Ns/2;
-
-      multi1d<QUDAPackedClovSite<R> >& quda_array = a->quda_array;
-
-      const TD& tri_dia = a->tri_dia;
-      const TO& tri_off = a->tri_off;
-
-      const int idtab[15]={0,1,3,6,10,2,4,7,11,5,8,12,9,13,14};
-
-      for(int ssite=lo; ssite < hi; ++ssite) {
-	int site = rb[cb].siteTable()[ssite];
-	// First Chiral Block
-	for(int i=0; i < 6; i++) { 
-	  quda_array[site].diag1[i] = tri_dia.elem(site).comp[0].diag[i].elem().elem();
-	}
-
-	int target_index=0;
-	
-	for(int col=0; col < Nc*Ns2-1; col++) { 
-	  for(int row=col+1; row < Nc*Ns2; row++) {
-
-	    int source_index = row*(row-1)/2 + col;
-
-	    quda_array[site].offDiag1[target_index][0] = tri_off.elem(site).comp[0].offd[source_index].real().elem();
-	    quda_array[site].offDiag1[target_index][1] = tri_off.elem(site).comp[0].offd[source_index].imag().elem();
-	    target_index++;
-	  }
-	}
-	// Second Chiral Block
-	for(int i=0; i < 6; i++) { 
-	  quda_array[site].diag2[i] = tri_dia.elem(site).comp[1].diag[i].elem().elem();
-	}
-
-	target_index=0;
-	for(int col=0; col < Nc*Ns2-1; col++) { 
-	  for(int row=col+1; row < Nc*Ns2; row++) {
-
-	    int source_index = row*(row-1)/2 + col;
-
-	    quda_array[site].offDiag2[target_index][0] = tri_off.elem(site).comp[1].offd[source_index].real().elem();
-	    quda_array[site].offDiag2[target_index][1] = tri_off.elem(site).comp[1].offd[source_index].imag().elem();
-	    target_index++;
-	  }
-	}
-      }
-      QDPIO::cout << "\n";
-    }
-  }
-
-#endif
 
   template <typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::packForQUDA(multi1d<QUDAPackedClovSite<typename WordType<T>::Type_t> >& quda_array, int cb) const
