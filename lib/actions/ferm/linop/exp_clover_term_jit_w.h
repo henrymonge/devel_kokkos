@@ -312,7 +312,7 @@ namespace Chroma
             const CloverFermActParams& param_,
             const JITExpCloverTermT<T,U,N_exp>& from_);
 
-    //! ! Not used for exp-clover: the inverse is built analytically by createInv (exp(-A))
+    //! Not used for exp-clover: the inverse is built analytically by createInv (exp(-A))
     /*!
      * \param cb   checkerboard of work (Read)
      */

@@ -1106,19 +1106,14 @@ namespace Chroma
   {
     START_CODE();
 
-    //StopWatch swatch;
-    //swatch.reset(); swatch.start();
-
     // Do I still need to do this?
     if( ds_u.size() != Nd ) {
       ds_u.resize(Nd);
     }
 
     ds_u = zero;
-    // Get the links
-    //const multi1d<U>& u = getU();
 
-    T tmp_psi; //psi;
+    T tmp_psi; 
     T ppsi;
 
     multi1d<T> cchi_vec;
@@ -1151,9 +1146,6 @@ namespace Chroma
     }
     ExpCloverTermBase<T,U>::derivMultipole(ds_u,cchi_vec,sum_psi_vec,isign,cb);
 
-    
-    //swatch.stop();
-    
     // Clear out the deriv on any fixed links
     (*this).getFermBC().zero(ds_u);
     END_CODE();
@@ -1366,23 +1358,17 @@ namespace Chroma
     END_CODE();
   }
 
-   /**
-   * Apply a dslash
+  /**
+   * Apply the exponentiated clover term at a single site
    *
-   * Performs the operation
+   *   chi(site) = m exp(A) psi(site)   (m = diag_mass), evaluated on the fly (Horner)
    *
-   *  chi <-   (L + D + L^dag) . psi
-   *
-   * where
-   *   L       is a lower triangular matrix
-   *   D       is the real diagonal. (stored together in type TRIANG)
-   *
-   * Arguments:
    * \param chi     result                                      (Write)
    * \param psi     source                                      (Read)
-   * \param isign   D'^dag or D'  ( MINUS | PLUS ) resp.        (Read)
-   * \param cb      Checkerboard of OUTPUT std::vector               (Read)
+   * \param isign   ignored: the term is Hermitian              (Read)
+   * \param site    lattice site index                          (Read)
    */
+
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::applySite(T& chi, const T& psi, enum PlusMinus isign,
 						 int site) const
@@ -1728,22 +1714,17 @@ namespace Chroma
     chi = psi + tmp; // psi + M chi
     (*this).getFermBC().modifyF(chi);
   }
-  /**
-   * Apply a dslash
+
+   /**
+   * Apply a power of the unexponentiated clover matrix on checkerboard cb
    *
-   * Performs the operation
+   *   chi = A^power psi      (power >= 0; A^0 = identity)
    *
-   *  chi <-   (L + D + L^dag) . psi
-   *
-   * where
-   *   L       is a lower triangular matrix
-   *   D       is the real diagonal. (stored together in type TRIANG)
-   *
-   * Arguments:
    * \param chi     result                                      (Write)
    * \param psi     source                                      (Read)
-   * \param isign   D'^dag or D'  ( MINUS | PLUS ) resp.        (Read)
-   * \param cb      Checkerboard of OUTPUT std::vector               (Read)
+   * \param isign   ignored: the term is Hermitian              (Read)
+   * \param cb      checkerboard of the output                  (Read)
+   * \param power   exponent                                    (Read)
    */
 
   template <typename T, typename U, int N_exp>
