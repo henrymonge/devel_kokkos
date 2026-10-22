@@ -481,16 +481,13 @@ namespace Chroma
 
     }
 
+    //! Owns raw per-site storage (tri, exp_tri): not copyable.
+    //! Use create()/createInv() to build one term from another.
+    QDPExpCloverTermT(const QDPExpCloverTermT&) = delete;
+    QDPExpCloverTermT& operator=(const QDPExpCloverTermT&) = delete;
+
     //! Creation routine
     void create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs, const CloverFermActParams& param_);
-
-    virtual void create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
-            const CloverFermActParams& param_,
-            const QDPExpCloverTermT<T, U, N_exp>& from_, int inv_op);
-
-    virtual void create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
-			const CloverFermActParams& param_,
-			const QDPExpCloverTermT<T, U, N_exp>& from_);
 
     virtual void createInv(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
             const CloverFermActParams& param_,
@@ -662,129 +659,13 @@ namespace Chroma
       nodeSites * sizeof(ExpClovTriang<REALT>), QDP::Allocator::DEFAULT);
   }
 
-  // Now copy
-  template <typename T, typename U, int N_exp>
-  void QDPExpCloverTermT<T, U, N_exp>::create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
-					      const CloverFermActParams& param_,
-					      const QDPExpCloverTermT<T, U, N_exp>& from, int inv_op)
-  {
-#ifndef QDP_IS_QDPJIT
-    START_CODE();
-    u.resize(Nd);
-
-    u = fs->getLinks();
-    fbc = fs->getFermBC();
-    param = param_;
-
-    // Sanity check
-    if (fbc.operator->() == 0)
-    {
-      QDPIO::cerr << "QDPCloverTerm: error: fbc is null" << std::endl;
-      QDP_abort(1);
-    }
-
-    //
-    // Yuk. Some bits of knowledge of the dslash term are buried in the
-    // effective mass term. They show up here. If I wanted some more
-    // complicated dslash then this will have to be fixed/adjusted.
-    //
-    
-    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-    diag_mass = 1 + (Nd - 1) * ff + param.Mass;
-    
-    if (inv_op==1){
-       diag_mass = 1/( 1 + (Nd - 1) * ff + param.Mass);
-
-    }
-    else{
-        diag_mass =  1 + (Nd - 1) * ff + param.Mass;
-
-    }
-    
-    {
-      RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
-      param.clovCoeffR *= Real(0.5) * ff / diag_mass;
-      param.clovCoeffT *= Real(0.5) / diag_mass;
-    }
-
-    
-    //diag_mass = 1/from.diag_mass;
-
-    //if (inv_op==1)
-    //     diag_mass = 1.0/diag_mass;
-    /* Calculate F(mu,nu) */
-    // multi1d<LatticeColorMatrix> f;
-    // mesField(f, u);
-    // makeClov(f, diag_mass);
-
-    int nodeSites = Layout::sitesOnNode();
-    // Deep copy.
-#  pragma omp parallel for
-    for (int site = 0; site < nodeSites; ++site)
-    {
-      for (int block = 0; block < 2; ++block)
-      {
-
-	for (int d = 0; d < 6; ++d)
-	{
-	  tri[site].A.diag[block][d] = from.tri[site].A.diag[block][d];
-
-	}
-    
-	for (int od = 0; od < 15; ++od)
-	{
-	  tri[site].A.offd[block][od] = from.tri[site].A.offd[block][od];
-	}
-
-	// The exponentiation coefficients
-	for (int i = 0; i < 6; ++i)
-	{
-      if (inv_op==1)
-      {
-        tri[site].qinv[block][i] = from.tri[site].q[block][i];
-        tri[site].q[block][i] = from.tri[site].qinv[block][i]; 
-      }
-      else
-      {
-	    tri[site].q[block][i] = from.tri[site].q[block][i];
-	    tri[site].qinv[block][i] = from.tri[site].qinv[block][i];
-      }
- 
-	}
-
-	// The force coefficients
-	for (int i = 0; i < 6; ++i)
-	{
-	  for (int j = 0; j < 6; ++j)
-	  {
-	    tri[site].C[block][i][j] = from.tri[site].C[block][i][j];
-	  }
-	}
-      } // End site loop
-
-    }
-
-    END_CODE();
-#endif
-  }
-
-#if 1
-  // Now copy
-  template <typename T, typename U, int N_exp>
-  void QDPExpCloverTermT<T, U, N_exp>::create(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
-					      const CloverFermActParams& param_,
-					      const QDPExpCloverTermT<T, U, N_exp>& from)
-  {  
-     QDPIO::cout << "Creating from copy\n";
-     create(fs,param_,from,0);
-  }
-#endif
   // Now copy and create inv
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::createInv(Handle<FermState<T, multi1d<U>, multi1d<U>>> fs,
                           const CloverFermActParams& param_,
                           const QDPExpCloverTermT<T, U, N_exp>& from)
   {
+#ifndef QDP_IS_QDPJIT
      QDPIO::cout << "Creating inverse\n";
      //create(fs,param_,from,1);
 
@@ -815,7 +696,7 @@ namespace Chroma
     }
 
     END_CODE();
-
+#endif
   }
 
 

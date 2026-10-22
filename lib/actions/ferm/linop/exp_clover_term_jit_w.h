@@ -309,15 +309,6 @@ namespace Chroma
     void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
 		const CloverFermActParams& param_);
 
-
-    virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
-            const CloverFermActParams& param_,
-            const JITExpCloverTermT<T,U,N_exp>& from_, int inv_op);
-
-    virtual void create(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
-			const CloverFermActParams& param_,
-			const JITExpCloverTermT<T,U,N_exp>& from_);
-
     virtual void createInv(Handle< FermState<T, multi1d<U>, multi1d<U> > > fs,
             const CloverFermActParams& param_,
             const JITExpCloverTermT<T,U,N_exp>& from_);
@@ -717,85 +708,23 @@ namespace Chroma
   template<typename T, typename U,int N_exp>
   JITExpCloverTermT<T,U,N_exp>::JITExpCloverTermT() {}
 
-  // Now copy
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
-				   const CloverFermActParams& param_,
-				   const JITExpCloverTermT<T,U,N_exp>& from, int inv_op)
-  {
-    START_CODE();
-
-    u.resize(Nd);
-
-    u = fs->getLinks();
-    fbc = fs->getFermBC();
-    param = param_;
-    
-    // Sanity check
-    if (fbc.operator->() == 0) {
-      QDPIO::cerr << "JITExpCloverTerm: error: fbc is null" << std::endl;
-      QDP_abort(1);
-    }
-   
-    //
-    // Yuk. Some bits of knowledge of the dslash term are buried in the 
-    // effective mass term. They show up here. If I wanted some more 
-    // complicated dslash then this will have to be fixed/adjusted.
-    //
-    
-    RealT ff = param.anisoParam.anisoP ? param.anisoParam.nu / param.anisoParam.xi_0 : Real(1);
-    diag_mass = 1 + (Nd-1)*ff + param.Mass;
-    
-     
-    {
-      RealT ff = param.anisoParam.anisoP ? Real(1) / param.anisoParam.xi_0 : Real(1);
-      param.clovCoeffR *= Real(0.5) * ff / diag_mass;
-      param.clovCoeffT *= Real(0.5) / diag_mass;
-    }
-   
-    if (inv_op==1)
-        diag_mass = 1.0/diag_mass;
- 
-    /* Calculate F(mu,nu) */
-    //multi1d<LatticeColorMatrix> f;
-    //mesField(f, u);
-    //makeClov(f, diag_mass);
-        
-  
-    tri_dia = from.tri_dia;
-    tri_off = from.tri_off;
-    if (inv_op == 0)
-        C = from.C;           // only the forward copy may be differentiated;
-                              // the inverse copy (createInv) never uses C
-    if(inv_op == 1){
-        qc = from.qc_inv;
-        qc_inv = from.qc;
-    }
-    else{
-        qc = from.qc;
-        qc_inv = from.qc_inv;
-    }
-
-    END_CODE();  
-  }
-
-  template<typename T, typename U,int N_exp>
-  void JITExpCloverTermT<T,U,N_exp>::create(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
-                   const CloverFermActParams& param_,
-                   const JITExpCloverTermT<T,U,N_exp>& from)
-  {
-     QDPIO::cout << "Creating clover term\n";
-     create(fs,param_,from,0);
-  }
-
-
   template<typename T, typename U,int N_exp>
   void JITExpCloverTermT<T,U,N_exp>::createInv(Handle< FermState<T,multi1d<U>,multi1d<U> > > fs,
                    const CloverFermActParams& param_,
                    const JITExpCloverTermT<T,U,N_exp>& from)
   {
      QDPIO::cout << "Creating inverse\n";
-     create(fs,param_,from,1);
+     //create(fs,param_,from,1);
+
+     u   = from.u;
+     fbc = from.fbc;
+     param     = from.param;            // already scaled with the forward 1/diag_mass
+     diag_mass = 1.0 / from.diag_mass;
+
+     tri_dia = from.tri_dia;
+     tri_off = from.tri_off;
+     qc      = from.qc_inv;             // exp(-A) coefficients
+     qc_inv  = from.qc;
   }
 
 
@@ -949,7 +878,7 @@ namespace Chroma
 #ifdef QDP_DEEP_LOG
     function.type_W = typeid(REAL).name();
     //function.set_dest_id( tri_dia.getId() );
-    function.set_dest_id( exp_tri_off.getId() );
+    function.set_dest_id( tri_off.getId() );
     function.set_is_lat(true);
 #endif
     
@@ -1235,7 +1164,7 @@ namespace Chroma
   {
 #ifdef QDP_DEEP_LOG
     function.type_W = typeid(REAL).name();
-    function.set_dest_id( chi.getId() );
+    function.set_dest_id( exp_tri_off.getId() );
     function.set_is_lat(true);
 #endif
    
