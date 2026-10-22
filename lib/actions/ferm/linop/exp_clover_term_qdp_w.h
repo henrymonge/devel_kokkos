@@ -666,9 +666,6 @@ namespace Chroma
                           const QDPExpCloverTermT<T, U, N_exp>& from)
   {
 #ifndef QDP_IS_QDPJIT
-     QDPIO::cout << "Creating inverse\n";
-     //create(fs,param_,from,1);
-
     START_CODE();
 
     u   = from.u;

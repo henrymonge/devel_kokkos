@@ -65,10 +65,6 @@ namespace Chroma
 
     ds_u = zero;
 
-    // Get the links
-    //const multi1d<U>& u = getU();
-
-
     // Now compute the insertions
     for(int mu=0; mu < Nd; mu++) {
       for(int nu = mu+1; nu < Nd; nu++) {
@@ -97,9 +93,6 @@ namespace Chroma
 	  ferm_tmp[rb[cb]]  = Gamma(mu_nu_index)*psi[i];
 	  s_xy_dag[rb[cb]]  += traceSpin( outerProduct(ferm_tmp,chi[i]));
 	}
-
-    //For exp-clover, the psi and chi can be applied directly to the field, and thus the trace spin is zero?
-
 	s_xy_dag[rb[cb]] *= Real(factor);
 
 	// Compute contributions
