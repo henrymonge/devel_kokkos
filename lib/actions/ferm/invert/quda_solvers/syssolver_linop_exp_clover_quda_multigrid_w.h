@@ -453,6 +453,47 @@ namespace Chroma
 
 			loadCloverQuda(&(packed_clov[0]), &(packed_invclov[0]), &quda_inv_param);
 
+#if 1   // DEBUG: Chroma vs QUDA clover inverse (symmetric MATPC: QUDA only stores the inverse)
+		{
+		  // 1) QUDA clover inverse vs Chroma invclov, on each parity
+		  for (int cb = 0; cb < 2; ++cb) {
+		    T src, res_q, res_c, d;
+		    gaussian(src);
+		    res_q = zero;
+		    res_c = zero;
+
+		    void* in  = (void*)&(src.elem(rb[cb].start()).elem(0).elem(0).real());
+		    void* out = (void*)&(res_q.elem(rb[cb].start()).elem(0).elem(0).real());
+
+		    cloverQuda(out, in, &quda_inv_param,
+		               (cb == 0) ? QUDA_EVEN_PARITY : QUDA_ODD_PARITY, 1);
+
+		    invclov->applyExpClov(res_c, src, PLUS, cb);
+
+		    d[rb[cb]] = res_q - res_c;
+		    QDPIO::cout << "CLOVCHECK cb=" << cb
+		                << "  |QUDA_inv - Chroma_inv|/|Chroma_inv| = "
+		                << sqrt(norm2(d, rb[cb]) / norm2(res_c, rb[cb])) << std::endl;
+		  }
+
+		  // 2) Chroma only: is invclov really the inverse of clov?
+		  for (int cb = 0; cb < 2; ++cb) {
+		    T src, t1, t2, d;
+		    gaussian(src);
+		    t1 = zero;
+		    t2 = zero;
+
+		    clov->applyExpClov(t1, src, PLUS, cb);
+		    invclov->applyExpClov(t2, t1, PLUS, cb);
+
+		    d[rb[cb]] = t2 - src;
+		    QDPIO::cout << "CLOVCHECK cb=" << cb
+		                << "  |Ainv*A*x - x|/|x| = "
+		                << sqrt(norm2(d, rb[cb]) / norm2(src, rb[cb])) << std::endl;
+		  }
+		}
+#endif
+
 #else
 
 #warning "USING QUDA DEVICE IFACE"

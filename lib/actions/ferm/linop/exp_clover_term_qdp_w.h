@@ -473,6 +473,12 @@ namespace Chroma
       {
 	QDP::Allocator::theQDPAllocator::Instance().free(tri);
       }
+
+      if (exp_tri != nullptr)
+      {
+        QDP::Allocator::theQDPAllocator::Instance().free(exp_tri);
+      }
+
     }
 
     //! Creation routine
@@ -757,7 +763,6 @@ namespace Chroma
       } // End site loop
 
     }
-     QDPIO::cout << "Diag mass " << diag_mass.elem().elem().elem().elem()<< "\n";
 
     END_CODE();
 #endif
@@ -781,7 +786,36 @@ namespace Chroma
                           const QDPExpCloverTermT<T, U, N_exp>& from)
   {
      QDPIO::cout << "Creating inverse\n";
-     create(fs,param_,from,1);
+     //create(fs,param_,from,1);
+
+    START_CODE();
+
+    u   = from.u;
+    fbc = from.fbc;
+    param     = from.param;            // already scaled with the forward 1/diag_mass
+    diag_mass = 1.0 / from.diag_mass;
+
+    const int nodeSites = Layout::sitesOnNode();
+#  pragma omp parallel for
+    for (int site = 0; site < nodeSites; ++site)
+    {
+      for (int block = 0; block < 2; ++block)
+      {
+        for (int d = 0; d < 6; ++d)
+          tri[site].A.diag[block][d] = from.tri[site].A.diag[block][d];
+
+        for (int od = 0; od < 15; ++od)
+          tri[site].A.offd[block][od] = from.tri[site].A.offd[block][od];
+
+        for (int i = 0; i < 6; ++i) {
+          tri[site].q[block][i]    = from.tri[site].qinv[block][i];   // exp(-A)
+          tri[site].qinv[block][i] = from.tri[site].q[block][i];
+        }
+      }
+    }
+
+    END_CODE();
+
   }
 
 

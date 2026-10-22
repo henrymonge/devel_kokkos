@@ -949,7 +949,7 @@ namespace Chroma
 #ifdef QDP_DEEP_LOG
     function.type_W = typeid(REAL).name();
     //function.set_dest_id( tri_dia.getId() );
-    function.set_dest_id( tri_off.getId() );
+    function.set_dest_id( exp_tri_off.getId() );
     function.set_is_lat(true);
 #endif
     
