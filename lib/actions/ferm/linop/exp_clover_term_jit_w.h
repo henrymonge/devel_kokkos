@@ -1423,10 +1423,7 @@ namespace Chroma
 	for(int j = 0; j < i; j++)
 	  {
 	    tmp_r.elem((blck*n+i)/3).elem((blck*n+i)%3) +=  tri_off_r.elem(blck).elem(kij) * chi_r.elem((blck*n+j)/3).elem((blck*n+j)%3);
-	    // cchi[blck*n+i] += tri[site].offd[blck][kij] * ppsi[blck*n+j];
-
 	    tmp_r.elem((blck*n+j)/3).elem((blck*n+j)%3) +=  conj(tri_off_r.elem(blck).elem(kij)) * chi_r.elem((blck*n+i)/3).elem((blck*n+i)%3);
-	    // cchi[blck*n+j] += conj(tri[site].offd[blck][kij]) * ppsi[blck*n+i];
 	    kij++;
 	  }
       }
@@ -1632,9 +1629,7 @@ namespace Chroma
     for(int cspin = 0; cspin < n; ++cspin)
     {
         chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-        // cchi[0*n+i] = ppsi[0*n+i];
         chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
-        // cchi[1*n+i] = tri[site].diag[1][i] * ppsi[1*n+i];
     }
 
       // Main loop:  chi = psi + q[i]/q[i-1] A chi
@@ -2051,8 +2046,6 @@ namespace Chroma
     }
 
     ds_u = zero;
-    // Get the links
-    //const multi1d<U>& u = getU();
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;

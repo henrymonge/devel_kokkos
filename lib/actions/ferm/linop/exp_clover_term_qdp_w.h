@@ -493,38 +493,20 @@ namespace Chroma
             const CloverFermActParams& param_,
             const QDPExpCloverTermT<T, U, N_exp>& from_);
 
-    //! Computes the inverse of the term on cb using Cholesky
+    //! Not used for exp-clover: the inverse is built analytically by createInv (exp(-A))
     /*!
      * \param cb   checkerboard of work (Read)
      */
     void choles(int cb) override;
 
-    //! Computes the inverse of the term on cb using Cholesky
+    //! Not used for exp-clover: the inverse is built analytically by createInv (exp(-A))
     /*!
      * \param cb   checkerboard of work (Read)
      * \return logarithm of the determinant
      * derivTrLn = 0 for exp-clover, so cholesDet is never used 
      */
     Double cholesDet(int cb) const { return Double(0); }
-    /**
-     * Apply a dslash
-     *
-     * Performs the operation
-     *
-     *  chi <-   (L + D + L^dag) . psi
-     *
-     * where
-     *   L       is a lower triangular matrix
-     *   D       is the real diagonal. (stored together in type TRIANG)
-     *
-     * Arguments:
-     * \param chi     result                                      (Write)
-     * \param psi     source                                      (Read)
-     * \param isign   D'^dag or D'  ( MINUS | PLUS ) resp.        (Read)
-     * \param cb      Checkerboard of OUTPUT std::vector               (Read)
-     */
-
-   //! Take deriv of D^power
+    //! Take deriv of D^power
     /*!
      * \param chi     left std::vector on cb                           (Read)
      * \param psi     right std::vector on 1-cb                        (Read)
@@ -582,20 +564,32 @@ namespace Chroma
     // Reference exponential using old fashioned taylor expansion
     void applyRef(T& chi, const T& psi, enum PlusMinus isign, int N = N_exp) const;
 
-    // Apply a power of a matrix from A^0 to A^5
+    // chi = A^power psi on cb (any power >= 0; A is the unexponentiated clover)
     void applyPower(T& chi, const T& psi, enum PlusMinus isign, int cb, int power = 1) const;
 
     // Apply coefficients to powers of a matrix A
     void applyCoeff(T& chi, const T& psi, enum PlusMinus isign,int cb, int pow_i, int pow_j) const;
 
-    // Apply exponential operator
+    /**
+     * Apply the exponentiated clover term on checkerboard cb
+     *
+     *   chi = m * exp(A) psi      (m = diag_mass; on an object built by createInv: (1/m) exp(-A) psi)
+     *
+     * evaluated on the fly from A (tri_dia/tri_off) and the coefficients qc via Horner.
+     * The precomputed version is applyExpClov (uses exp_tri; call makeExpClov(cb) first).
+     *
+     * \param chi     result                                      (Write)
+     * \param psi     source                                      (Read)
+     * \param isign   ignored: the term is Hermitian              (Read)
+     * \param cb      checkerboard of the output                  (Read)
+     */
     void apply(T& chi, const T& psi, enum PlusMinus isign, int cb) const override;
 
     void applyExpClov(T& chi, const T& psi, enum PlusMinus isign, int cb) const ;
 
     void makeExpClov(int cb);
 
-    // Apply exponential operator
+    // chi = (1/m) exp(-A) psi on cb, evaluated on the fly (Horner)
     void applyInv(T& chi, const T& psi, enum PlusMinus isign, int cb) const;
 
     // Apply exponential operator at a site
@@ -606,7 +600,7 @@ namespace Chroma
       applyPower(chi, psi, isign, cb, 1); // Explicily apply just the clover term.
     }
 
-    //! Calculates Tr_D ( Gamma_mat L )
+    //! Required by CloverTermBase; not used for exp-clover (derivTrLn == 0). Aborts if called.
     void triacntr(U& B, int mat, int cb) const override;
 
     //! Return the fermion BC object for this linear operator
@@ -634,7 +628,7 @@ namespace Chroma
       return u;
     }
 
-    //! Calculates Tr_D ( Gamma_mat L )
+    //! Clover coefficient for the (mu,nu) plane, already divided by diag_mass
     Real getCloverCoeff(int mu, int nu) const override;
 
   private:
@@ -988,7 +982,7 @@ namespace Chroma
 
   //! Invert
   /*!
-   * Computes the inverse of the term on cb using Cholesky
+   * CNot used for exp-clover: the inverse is built analytically by createInv (exp(-A)
    */
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::choles(int cb)
@@ -1413,7 +1407,7 @@ namespace Chroma
 #endif
   }
 
-  //! Returns the appropriate clover coefficient for indices mu and nu
+  //! Clover coefficient for the (mu,nu) plane, already divided by diag_mass
   template <typename T, typename U, int N_exp>
   Real QDPExpCloverTermT<T, U, N_exp>::getCloverCoeff(int mu, int nu) const
   {
@@ -1855,7 +1849,19 @@ namespace Chroma
 #endif
   }
 
-
+    /**
+     * Apply the exponentiated clover term on checkerboard cb
+     *
+     *   chi = m * exp(A) psi      (m = diag_mass; on an object built by createInv: (1/m) exp(-A) psi)
+     *
+     * evaluated on the fly from A (tri_dia/tri_off) and the coefficients qc via Horner.
+     * The precomputed version is applyExpClov (uses exp_tri; call makeExpClov(cb) first).
+     *
+     * \param chi     result                                      (Write)
+     * \param psi     source                                      (Read)
+     * \param isign   ignored: the term is Hermitian              (Read)
+     * \param cb      checkerboard of the output                  (Read)
+     */
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::apply(T& chi, const T& psi, enum PlusMinus isign,
 					     int cb) const
@@ -1907,39 +1913,7 @@ namespace Chroma
 #endif
   }
 
-  //! TRIACNTR
-  /*!
-   * \ingroup linop
-   *
-   *  Calculates
-   *     Tr_D ( Gamma_mat L )
-   *
-   * This routine is specific to Wilson fermions!
-   *
-   *  the trace over the Dirac indices for one of the 16 Gamma matrices
-   *  and a hermitian color x spin matrix A, stored as a block diagonal
-   *  complex lower triangular matrix L and a real diagonal diag_L.
-
-   *  Here 0 <= mat <= 15 and
-   *  if mat = mat_1 + mat_2 * 2 + mat_3 * 4 + mat_4 * 8
-   *
-   *  Gamma(mat) = gamma(1)^(mat_1) * gamma(2)^(mat_2) * gamma(3)^(mat_3)
-   *             * gamma(4)^(mat_4)
-   *
-   *  Further, in basis for the Gamma matrices used, A is of the form
-   *
-   *      | A_0 |  0  |
-   *  A = | --------- |
-   *      |  0  | A_1 |
-   *
-   *
-   * Arguments:
-   *
-   *  \param B         the resulting SU(N) color matrix	  (Write)
-   *  \param clov      clover term                        (Read)
-   *  \param mat       label of the Gamma matrix          (Read)
-   */
-
+  //! Required by CloverTermBase; not used for exp-clover (derivTrLn == 0). Aborts if called.
   template <typename T, typename U, int N_exp>
   void QDPExpCloverTermT<T, U, N_exp>::triacntr(U& B, int mat, int cb) const
   {
