@@ -628,8 +628,6 @@ namespace Chroma
      */
     void makeClov(const multi1d<U>& f, const RealT& diag_mass);
 
-    // void tracePowers();
-
     //! Get the u field
     const multi1d<U>& getU() const override
     {
@@ -996,7 +994,6 @@ namespace Chroma
   void QDPExpCloverTermT<T, U, N_exp>::choles(int cb)
   {
     //This is not needed for exp-clover
-    //QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
   }
 
   //! Take deriv of D
@@ -1044,19 +1041,13 @@ namespace Chroma
   {
     START_CODE();
 
-    //StopWatch swatch;
-    //swatch.reset(); swatch.start();
-    //QDPIO::cout << "\nUsing improved deriv function \n";
-
-
     // Do I still need to do this?
     if( ds_u.size() != Nd ) {
       ds_u.resize(Nd);
     }
 
     ds_u = zero;
-    // Get the links
-    //const multi1d<U>& u = getU();
+
     T ppsi;
     T tmp_psi;
 
@@ -1346,8 +1337,8 @@ namespace Chroma
 
 	}//for block ends
 
-	// Assemble te exponential from the q-s and powers of A.
-	// siteExponentiate(tri[site]);
+	// Assemble the exponential from the q-s and powers of A.
+
       } /* End Site Loop */
     }	/* End Function */
 
@@ -1414,7 +1405,7 @@ namespace Chroma
     RComplex<REALT>* cchi = (RComplex<REALT>*)&(chi.elem(site).elem(0).elem(0));
     const RComplex<REALT>* const ppsi =
       (const RComplex<REALT>* const) & (psi.elem(site).elem(0).elem(0));
-    //siteApplicationExp(cchi, tri[site], ppsi);
+    
     const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
     siteApplicationExp<N_exp>(ddiag_mass, cchi, tri[site], ppsi);
 
@@ -1561,7 +1552,6 @@ namespace Chroma
     template <typename T>
     struct makeExpClovArgs {
       typedef typename WordType<T>::Type_t REALT;
-      //typedef OLattice<PScalar<PScalar<RScalar<REALT>>>> LatticeRealT;
       ExpClovTriang<REALT>* tri_out;
       ExpClovTriang<REALT>* tri;
       int cb;
@@ -1630,7 +1620,6 @@ namespace Chroma
         const RScalar<REALT> ddiag_mass = diag_mass.elem(site).elem().elem();
     siteApplicationExp<N_exp,REALT, inv>(ddiag_mass,cchi, tri[site], ppsi);
 
-	//siteApplicationExp<REALT, inv>(cchi, tri[site], ppsi);
       }
       END_CODE();
 #endif
@@ -1825,9 +1814,6 @@ namespace Chroma
     }
 
     Real mclov= diag_mass; //RealT(Nd) + param.Mass;
-    //if(inverse==1)
-    //    mclov= 1.0/mclov ; 
-
     QDPExpCloverEnv::makeExpClovArgs<T> arg = {exp_tri, tri, cb,mclov};
     int num_sites = rb[cb].siteTable().size();
 
@@ -1836,8 +1822,6 @@ namespace Chroma
     // ought to work for non-threaded targets too...
     dispatch_to_threads(num_sites, arg, QDPExpCloverEnv::makeExpClovSiteLoop<N_exp,T>);
     
-    //(*this).getFermBC().modifyF(chi, QDP::rb[cb]);
-
     END_CODE();
 #endif
   }
@@ -1860,11 +1844,7 @@ namespace Chroma
 
 
     QDPExpCloverEnv::ApplyArgs<T> arg = {diag_mass,chi, psi, exp_tri, cb};
-    //QDPExpCloverEnv::ApplyArgs<T> arg = {chi, psi, tri, cb};
-
     int num_sites = rb[cb].siteTable().size();
-
-    //printExpClov();
 
     // The dispatch function is at the end of the file
     // ought to work for non-threaded targets too...
@@ -1973,7 +1953,6 @@ namespace Chroma
   {
     template <typename R>
     struct QUDAPackArgs {
-      //typedef OScalar<PScalar<PScalar<RScalar<REALT>>>> RealT;
       int cb;
       multi1d<QUDAPackedClovSite<R>>& quda_array;
       const ExpClovTriang<R>* tri;

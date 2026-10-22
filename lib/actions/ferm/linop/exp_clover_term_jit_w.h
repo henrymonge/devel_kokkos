@@ -318,7 +318,6 @@ namespace Chroma
      */
     void choles(int cb){
         //This is not needed for exp-clover
-        //QDPIO::cerr << "JITExpCloverTerm: unimplemented function for exponentiated clover" << std::endl;
     };
 
     //! log det of the term on cb. det(m e^A) = m^12 per site (tr A = 0) is gauge independent: it cancels in Delta H and has no force, so 0 is returned.
@@ -410,9 +409,8 @@ namespace Chroma
     //! PACK UP the Clover term for QUDA library:
     void packForQUDA(multi1d<QUDAPackedClovSite<REALT> >& quda_pack, int cb) const; 
 
-    //int getDiaId() const { return tri_dia.getId(); }
-    //int getOffId() const { return tri_off.getId(); }
 
+    //No getDiaId/getOffId on purpose: QUDA must receive exp_tri (getExp*Id), never A
     int getExpDiaId() const { return exp_tri_dia.getId(); }
     int getExpOffId() const { return exp_tri_off.getId(); }
 
@@ -565,7 +563,6 @@ namespace Chroma
     for (int block = 0; block < 2; ++block)
     {
       int upper = N_exp + 1 < 6 ? N_exp + 1 : 6;
-      //enum { upper = (N_exp + 1 < 6 ? N_exp + 1 : 6) };
       
       for (int i = 0; i < upper; ++i)
       {
@@ -1230,7 +1227,6 @@ namespace Chroma
         {
             dotprod += A_ij<REALT,X,Y,block>(row,k,tri_dia_r_1,tri_off_r_1) * A_ij<REALT,X,Y,block>(k,col,tri_dia_r_2,tri_off_r_2);
         }
-        //out.insert(row, col, dotprod);
         A_ij_ins<REALT,X,Y,block>(row, col,dotprod, tri_dia_r_out,tri_off_r_out);
       }
     }
@@ -1418,10 +1414,8 @@ namespace Chroma
     int n = 2*Nc;
 
     for(int i = 0; i < n; ++i)
-      {
-	tmp_r.elem((blck*n+i)/3).elem((blck*n+i)%3) = tri_dia_r.elem(blck).elem(i) * chi_r.elem((blck*n+i)/3).elem((blck*n+i)%3);
-	// cchi[blck*n+i] = tri[site].diag[blck][i] * ppsi[blck*n+i];
-      }
+	    tmp_r.elem((blck*n+i)/3).elem((blck*n+i)%3) = tri_dia_r.elem(blck).elem(i) * chi_r.elem((blck*n+i)/3).elem((blck*n+i)%3);
+	
 
     int kij = 0;  
     for(int i = 0; i < n; ++i)
@@ -1512,9 +1506,7 @@ namespace Chroma
     for(int cspin = 0; cspin < n; ++cspin)
     {
         chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3);
-        // cchi[0*n+i] = ppsi[0*n+i];
         chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3);
-        // cchi[1*n+i] = tri[site].diag[1][i] * ppsi[1*n+i];
     }
 
       // Main loop:  chi = psi + q[i]/q[i-1] A chi
@@ -1526,7 +1518,6 @@ namespace Chroma
         for(int cspin = 0; cspin < n; ++cspin)
         {
             // Operator
-            //cchi[cspin] = ppsi[cspin] + (tri_in.q[0][pow] / tri_in.q[0][pow - 1]) * tmp[cspin];
             chi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) = psi_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3)
                     +(qc_r.elem(0).elem(pow) / qc_r.elem(0).elem(pow - 1)) * tmp_r.elem((0*n+cspin)/3).elem((0*n+cspin)%3) ;
             chi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3) = psi_r.elem((1*n+cspin)/3).elem((1*n+cspin)%3)
@@ -1999,8 +1990,6 @@ namespace Chroma
     }
 
     ds_u = zero;
-    // Get the links
-    //const multi1d<U>& u = getU();
 
     multi1d<T> cchi_vec;
     multi1d<T> sum_psi_vec;

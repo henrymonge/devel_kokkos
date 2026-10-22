@@ -54,7 +54,6 @@ namespace Chroma
     START_CODE();
 
     swatch.reset(); swatch.start();
-    //clov.apply(chi, psi, isign, 1);
     clov.applyExpClov(chi, psi, isign, 1);
 
     swatch.stop();
@@ -73,7 +72,6 @@ namespace Chroma
 
     // Nuke for testing
     swatch.reset(); swatch.start();
-    //clov.apply(chi, psi, isign, 0);
     clov.applyExpClov(chi, psi, isign, 0);
     swatch.stop();
     clov_apply_time += swatch.getTimeInSeconds();
@@ -90,7 +88,6 @@ namespace Chroma
 
     swatch.reset(); swatch.start();
 
-    //clov.applyInv(chi, psi, isign, 0);
     invclov.applyExpClov(chi, psi, isign, 0);
 
     swatch.stop();
@@ -164,8 +161,7 @@ namespace Chroma
     //  tmp1_o  =  D_oe   A^(-1)_ee  D_eo  psi_o
     D.apply(tmp1, psi, isign, 0);
 
-    swatch.reset(); swatch.start();
-    //clov.applyInv(tmp2, tmp1, isign, 0);   
+    swatch.reset(); swatch.start();   
     invclov.applyExpClov(tmp2, tmp1, isign, 0); 
 
     swatch.stop();
@@ -175,7 +171,6 @@ namespace Chroma
 
     //  chi_o  =  A_oo  psi_o  -  tmp1_o
     swatch.reset(); swatch.start();
-    //clov.apply(chi, psi, isign, 1);
     clov.applyExpClov(chi, psi, isign, 1);
 
     swatch.stop();
@@ -253,16 +248,8 @@ namespace Chroma
   {
     START_CODE();
 
-    //invclov.derivTrLn(ds_u, isign, 0);
-    // Testing Odd Odd Term - get nothing from even even term
+    // get nothing from even even term
     clov.derivTrLn(ds_u, isign, 0);
-    /* The above is zero, so no need for rescaling
-    for (int mu = 0; mu < Nd; mu++)
-    {
-      ds_u[mu] *= (Real(Nd) + param.Mass);
-    }
-    */  
-
     END_CODE();
   }
 

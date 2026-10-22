@@ -45,7 +45,7 @@ namespace Chroma
 
     //  chi   =  A . psi - 0.5 * D' . psi  */
     A(chi, psi, isign);
-    //chi *= (Real(Nd) + param.Mass);
+
     D(tmp, psi, isign);
     chi += mhalf * tmp;
 
@@ -59,12 +59,6 @@ namespace Chroma
 
     A.deriv(ds_u, chi, psi, isign);
 
-    /*
-    for (int mu = 0; mu < Nd; mu++)
-    {
-      ds_u[mu] *= (Real(Nd) + param.Mass);
-    }
-    */
     multi1d<LatticeColorMatrix> ds_tmp(Nd);
 
     ds_tmp = zero;
