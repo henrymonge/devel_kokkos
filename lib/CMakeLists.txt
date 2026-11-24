@@ -1466,12 +1466,12 @@ target_sources(chromalib PRIVATE
 	actions/ferm/fermacts/eoprec_zolo_nef_fermact_array_w.cc 
 	actions/ferm/fermacts/eoprec_ovext_fermact_array_w.cc 
 	actions/ferm/fermacts/clover_fermact_params_w.cc 
-	actions/ferm/fermacts/eoprec_clover_fermact_w.cc
-    actions/ferm/fermacts/eoprec_exp_clover_fermact_w.cc 
+	actions/ferm/fermacts/eoprec_clover_fermact_w.cc 
+	actions/ferm/fermacts/eoprec_exp_clover_fermact_w.cc 
 	actions/ferm/fermacts/seoprec_clover_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_clover_orbifold_fermact_w.cc 
-	actions/ferm/fermacts/unprec_clover_fermact_w.cc
-    actions/ferm/fermacts/unprec_exp_clover_fermact_w.cc 
+	actions/ferm/fermacts/unprec_clover_fermact_w.cc 
+	actions/ferm/fermacts/unprec_exp_clover_fermact_w.cc 
 	actions/ferm/fermacts/nef_fermact_params_w.cc 
 	actions/ferm/fermacts/eoprec_slic_fermact_w.cc 
 	actions/ferm/fermacts/eoprec_slrc_fermact_w.cc 
@@ -1563,13 +1563,13 @@ target_sources(chromalib PRIVATE
 	actions/ferm/linop/unprec_w12_linop_w.cc 
 	actions/ferm/linop/unprec_wilson_linop_w.cc 
 	actions/ferm/linop/clover_term_base_w.cc 
-	actions/ferm/linop/eoprec_clover_linop_w.cc
-    actions/ferm/linop/eoprec_exp_clover_linop_w.cc   
+	actions/ferm/linop/eoprec_clover_linop_w.cc 
+	actions/ferm/linop/eoprec_exp_clover_linop_w.cc   
 	actions/ferm/linop/seoprec_clover_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_dumb_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_orbifold_linop_w.cc 
-	actions/ferm/linop/unprec_clover_linop_w.cc
-    actions/ferm/linop/unprec_exp_clover_linop_w.cc 
+	actions/ferm/linop/unprec_clover_linop_w.cc 
+	actions/ferm/linop/unprec_exp_clover_linop_w.cc 
 	actions/ferm/linop/eoprec_clover_extfield_linop_w.cc 
 	actions/ferm/linop/eoprec_slic_linop_w.cc 
 	actions/ferm/linop/eoprec_slrc_linop_w.cc 
@@ -1928,7 +1928,8 @@ endif()
 # QDP++ clover term: not with QDP-JIT (JIT clover term)
 #######################################################
 if( NOT QDP_IS_QDPJIT )
-  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_qdp_w.h actions/ferm/linop/exp_clover_term_qdp_w.h)
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_qdp_w.h)
+    list(APPEND ChromaLIB_HEADERS actions/ferm/linop/exp_clover_term_qdp_w.h)
   target_sources(chromalib PRIVATE actions/ferm/linop/clover_term_qdp_w.cc)
 endif()
 
@@ -1936,7 +1937,8 @@ endif()
 # JIT CLOVER/STOUTING
 #######################################################
 if( Chroma_ENABLE_JIT_CLOVER )
-  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit_w.h actions/ferm/linop/exp_clover_term_jit_w.h)
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit_w.h)
+  list(APPEND ChromaLIB_HEADERS actions/ferm/linop/exp_clover_term_jit_w.h)
   list(APPEND ChromaLIB_HEADERS actions/ferm/linop/clover_term_jit2_w.h)
   target_sources(chromalib PRIVATE util/gauge/stout_utils_jit.cc)
   target_sources(chromalib PRIVATE util/gauge/stout_utils_jit2.cc)

@@ -114,13 +114,10 @@ add_library(GTest ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/gtest/gtest-all.cc)
 target_include_directories(GTest PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set_target_properties(GTest PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF)
 
-
-
 add_executable(t_exp_clover
 t_exp_clover.cc
 chroma_gtest_env.h 
 exp_clover_tests.cc)
-
 
 add_executable(t_symm_prec 
 	t_symm_prec.cc 
